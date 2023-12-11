@@ -1,0 +1,318 @@
+\chapter{Optimal control} \label{ch:optimal_control}
+Much of reinforcement can be seen as optimal control, albeit with less assumptions about the environment, and less computation. Because of this, we will start this chapter by briefly introducing the fundamental aspects of optimal control theory.
+
+This chapter and the following two are loosely based on the second edition of Sutton and Barto's \textit{Reinforcement Learning}~\cite{sutton2018reinforcement} and Silver's lectures~\cite{silver2015lectures}.
+
+\section{Markov decision processes}
+An optimal control agent is modeled to perform sequential decision-making by interacting with the environment. The environment is usually defined as an infinite-horizon Markov decision process~(MDP), referred to as Markov decision process from now on. Note that are there several extensions and generalizations, accounting for continuous time, or partial observability of the state. For ease of exposition we will just restrict ourselves to the most common case.
+
+\subsection{The agent--environment interaction}
+A Markov decision process is defined as a tuple~${\left(\statespace,\actionspace,\transition,\initialdistribution,\immediatereward,\discount\right)}$, where~${\statespace}$ is a set of states,~${\actionspace}$ is a set of actions,~${\transition}$ is a transition function,~${\initialdistribution}$ is a probability distribution of initial states,~${\immediatereward}$ is a reward function, and~${\discount\in\left[0,1\right]}$ is a discount factor, whose role will be explained later. For now, we will only consider finite MDPs, i.e., MDPs with a finite set of states and actions.
+
+Markov decision processes satisfy the Markov property, which assumes that future states and rewards depend only on the current state and action. Because of this, we can define the transition function as
+\begin{equation} \label{eq:transition_probability}
+    \transition\left(\state'\middle\vert\state,\action\right)\doteq\Pr\left(\randomstate_{\timestep+1}=\state'\middle\vert\randomstate_{\timestep}=\state,\randomaction_{\timestep}=\action\right),
+\end{equation}
+where~${\timestep\in\mathbb{N}_{0}}$ denotes the time step. The initial distribution~${\initialdistribution}$ is defined as
+\begin{equation}
+	\initialdistribution\left(\state\right)=\Pr\left(\randomstate_{0}=\state\right).
+\end{equation}
+The reward function defines the expected immediate reward when action~${\action}$ is taken in state~${\state}$, i.e.,
+\begin{equation} \label{eq:reward_function}
+	\immediatereward\left(\state,\action\right)=\mathbb{E}\left[\randomreward_{\timestep+1}\middle\vert\randomstate_{\timestep}=\state,\randomaction_{\timestep}=\action\right].
+\end{equation}
+
+The behavior of the agent is described by its policy~${\policy}$, a mapping from states to actions, which defines the probability of taking action~${\action}$ in a given state~${\state}$:
+\begin{equation} \label{eq:policy}
+    \policy\left(\action\middle\vert\state\right)\doteq\Pr\left(\randomaction_{\timestep}=\action\middle\vert\randomstate_{\timestep}=\state\right).
+\end{equation}
+The policy can be either deterministic or stochastic. Sometimes, we will use~${\policy\left(\state\right)}$ as a shorthand notation for deterministic policies.
+
+At each of a sequence of time steps~${\timestep}$, the environment is in some state~${\randomstate_{\timestep}}$. The agent chooses and performs an action,~${\randomaction_{\timestep}\sim\policy\left(\cdot\middle\vert\randomstate_{\timestep}\right)}$. Thus, the agent receives the new state of the environment,~${\randomstate_{\timestep+1}\sim\transition\left(\cdot\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)}$, and the reward associated to the state transition,~${\randomreward_{\timestep+1}}$, given by~${\immediatereward\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)}$.
+
+MDPs are called episodic if there is at least one state in which the process terminates. In this case, we denote the last time step as ${\horizon}$. Once a process terminates a new episode starts. We call a trajectory the sequence of random variables until a terminal state is reached.
+
+\subsection{Return and value}
+The return~${\return_{\timestep}}$ is defined as the discounted sum of rewards starting at time step~${\timestep}$,
+\begin{equation}
+    \return_{\timestep}\doteq\randomreward_{\timestep+1}+\discount\randomreward_{\timestep+2}+\discount^{2}\randomreward_{\timestep+3}+\dots=\sum_{\indexletter=0}^{\infty}\discount^{\indexletter}\randomreward_{\timestep+\indexletter+1}.
+\end{equation}
+As~${\discount}$ gets smaller, the agent ignores farther-away rewards, and vice versa. Additionally, we can split the return in two parts: the immediate reward, and the discounted return at the next time step, as follows:
+\begin{align} \label{eq:recursive_returns}
+    \return_{\timestep}
+        &=\randomreward_{\timestep+1}+\discount\randomreward_{\timestep+2}+\discount^{2}\randomreward_{\timestep+3}+\dots \notag \\
+        &=\randomreward_{\timestep+1}+\discount\left(\randomreward_{\timestep+2}+\discount\randomreward_{\timestep+3}+\discount^{2}\randomreward_{\timestep+4}+\dots\right) \notag \\
+        &=\randomreward_{\timestep+1}+\discount\return_{\timestep+1}.
+\end{align}
+If~${\discount<1}$, the infinite sum has a finite value only if the sequence of rewards~${\left\{\randomreward_{\indexletter}\right\}}$ is bounded. We admit~${\discount=1}$ only for episodic MDPs.
+
+We define the state-value function,~${\statevalue\policyscript\left(\state\right)}$, as the expected discounted return when starting in state~${\state}$, and following policy~${\policy}$ thereafter,
+\begin{equation} \label{eq:state_value}
+    \statevalue\policyscript\left(\state\right)\doteq\mathbb{E}_{\policy}\left[\return_{\timestep}\middle\vert\randomstate_{\timestep}=\state\right],
+\end{equation}
+where~${\mathbb{E}_{\policy}\left[\cdot\right]}$ indicates the expected value of a random variable given that the agent follows policy~${\policy}$ at each time step. We will however drop the subscript~${\policy}$ to simplify notation going forward. Similarly, we define the value of being in state~${\state}$, taking action~${\action}$, and following policy~${\policy}$ thereafter, as follows:
+\begin{equation} \label{eq:action_value}
+    \actionvalue\policyscript\left(\state,\action\right)\doteq\mathbb{E}_{\policy}\left[\return_{\timestep}\middle\vert\randomstate_{\timestep}=\state,\randomaction_{\timestep}=\action\right].
+\end{equation}
+We call~${\actionvalue\policyscript\left(\state,\action\right)}$ the action-value function.
+
+\subsection{Optimality criterion}
+We define a partial ordering over policies:
+\begin{equation}
+    \policy\geq\policy'\iff\statevalue\policyscript\left(\state\right)\geq\statevalue\script{\policy'}\left(\state\right),~\textnormal{for all}~\state.
+\end{equation}
+A policy which is better than or equal to all other policies is called an optimal policy. All optimal policies are denoted as~$\policy\optimal$. Following an optimal policy yields both the optimal state-value,~${\statevalue\optimal}$,
+\begin{equation} \label{eq:optimal_state_value}
+    \statevalue\script{\policy\optimal}\left(\state\right)=\statevalue\optimal\left(\state\right)\doteq\max_{\policy}\statevalue\policyscript\left(\state\right),~\textnormal{for all}~\state,
+\end{equation}
+and the optimal action-value,~${\actionvalue\optimal}$,
+\begin{equation}
+    \actionvalue\script{\policy\optimal}\left(\state,\action\right)=\actionvalue\optimal\left(\state,\action\right)\doteq\max_{\policy}\actionvalue\policyscript\left(\state,\action\right),~\textnormal{for all}~\state,\action.
+\end{equation}
+
+Both the optimal state- and optimal action-value functions specify the best possible performance obtainable in an MDP. Hence, they are the solution to the MDP. The problem of finding the optimal value function, and a corresponding optimal policy, is known as the control problem. Over the course of the remaining sections of the chapter, we will a see way in which the control problem can be solved when having perfect knowledge of the environment.
+
+\section{Bellman theory}
+In this section we introduce the Bellman equations~\cite{bellman1957dynamic}, which express a relationship between the value of the current state (or state-action pair) and the value of the following state (or state-action pair).
+
+\subsection{Bellman expectation equations}
+The state-value function can be rewritten in terms of the action-value function, as follows:
+\begin{align} \label{eq:v_wrt_q}
+    \statevalue\policyscript\left(\state\right)
+    	&=\mathbb{E}\left[\return_{\timestep}\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+    	&\overset{(a)}{=}\sum_{\action}\mathbb{E}\left[\return_{\timestep}\middle\vert\state,\action\right]\Pr\left(\action\middle\vert\state\right) \notag \\
+    	&\overset{(b)}{=}\sum_{\action}\policy\left(\action\middle\vert\state\right)\actionvalue\policyscript\left(\state,\action\right),
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows by the law of total expectation, and
+	\item follows from~\eqref{eq:policy} and~\eqref{eq:action_value}.
+\end{enumerate*}
+Similarly, the action-value function can be rewritten in terms of the state-value function,
+\begin{align} \label{eq:q_wrt_v}
+    \actionvalue\policyscript\left(\state,\action\right)
+    	&=\mathbb{E}\left[\return_{\timestep}\middle\vert\state,\action\right] \notag \\
+    	&\overset{(a)}{=}\mathbb{E}\left[\randomreward_{\timestep+1}\middle\vert\state,\action\right]+\discount\mathbb{E}\left[\return_{\timestep+1}\middle\vert\state,\action\right] \notag \\
+    	&\overset{(b)}{=}\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\mathbb{E}\left[\return_{\timestep+1}\middle\vert\state',\state,\action\right]\Pr\left(\state'\middle\vert\state,\action\right) \notag \\
+    	&\overset{(c)}{=}\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\mathbb{E}\left[\return_{t+1}\middle\vert\state'\right]\Pr\left(\state'\middle\vert\state,\action\right) \notag \\
+    	&\overset{(d)}{=}\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\statevalue\policyscript\left(\state'\right)
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows from~\eqref{eq:recursive_returns},
+	\item follows from~\eqref{eq:reward_function} and the law of total expectation,
+	\item follows by the Markov property, and
+	\item follows follows from~\eqref{eq:transition_probability} and~\eqref{eq:state_value}.
+\end{enumerate*}
+Ultimately, by plugging~\eqref{eq:q_wrt_v} into~\eqref{eq:v_wrt_q}, we obtain a definition of the state-value function in a state in terms of the state-value function in the next state:
+\begin{equation} \label{eq:bellman_expectation_state_value}
+    \statevalue\policyscript\left(\state\right)=\sum_{\action}\policy\left(\action\middle\vert\state\right)\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\statevalue\policyscript\left(\state'\right)\right).
+\end{equation}
+Likewise, if we plug~\eqref{eq:v_wrt_q} into~\eqref{eq:q_wrt_v}, we obtain a definition of the action-value function in a state-action pair in terms of the next state-action pair:
+\begin{equation} \label{eq:bellman_expectation_action_value}
+    \actionvalue\policyscript\left(\state,\action\right)=\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\policy\left(\action'\middle\vert \state'\right)\actionvalue\policyscript\left(\state',\action'\right).
+\end{equation}
+Equations~\eqref{eq:bellman_expectation_state_value} and~\eqref{eq:bellman_expectation_action_value} are the Bellman expectation equations for~${\statevalue\policyscript}$ and~${\actionvalue\policyscript}$. In both cases, we can interpret the value as the immediate reward plus the discounted value of the following state (or state-action pair), averaged over all possibilities, which depend on both the dynamics of the environment and the policy that the agent is following.
+
+\subsection{Bellman expectation backup}
+We define the operator~${\bellmanoperator\policyscript:\mathbb{R}^{\left\lvert\statespace\right\rvert}\rightarrow\mathbb{R}^{\left\lvert\statespace\right\rvert}}$ for the policy~${\policy}$ as
+\begin{align} \label{eq:bellman_expectation_backup}
+	\left(\bellmanoperator\policyscript\valuevector\right)\left(\state\right)
+		&\doteq\sum_{\action}\policy\left(\action\middle\vert\state\right)\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\valuevector\left(\state'\right)\right) \notag \\
+		&=\immediatereward\policyscript\left(\state,\action\right)+\discount\sum_{\state'}\transition\policyscript\left(\state'\middle\vert\state,\action\right)\valuevector\left(\state'\right),
+\end{align}
+where~${\immediatereward\policyscript}$ and~${\transition\policyscript}$ are given by
+\begin{equation}
+\begin{split}
+	\immediatereward\policyscript\left(\state\right)&\doteq\sum_{\action}\policy\left(\action\middle\vert\state\right)\immediatereward\left(\state,\action\right), \\
+	\transition\policyscript\left(\state'\middle\vert\state\right)&\doteq\sum_{\action}\policy\left(\action\middle\vert\state\right)\transition\left(\state'\middle\vert\state,\action\right).
+\end{split}
+\end{equation}
+We call~${\bellmanoperator\policyscript}$ the Bellman expectation backup operator. The name derives from the fact that the operator transfers value information back to a state from its successor states.
+
+We now show that applying the Bellman expectation backup operator brings value functions closer by at least~${\discount}$:
+\begin{align} \label{eq:bellman_expectation_contraction}
+    \left\lvert\left(\bellmanoperator\policyscript\valuevector_{1}\right)\left(\state\right)-\left(\bellmanoperator\policyscript\valuevector_{2}\right)\left(\state\right)\right\rvert
+    	&=\discount\left\lvert\sum_{\state'}\transition\policyscript\left(\state'\middle\vert\state\right)\left(\valuevector_{1}\left(\state'\right)-\valuevector_{2}\left(\state'\right)\right)\right\rvert \notag \\
+    	&\overset{(a)}{\leq}\discount\sum_{\state'}\transition\policyscript\left(\state'\middle\vert\state\right)\left\vert\valuevector_{1}\left(\state'\right)-\valuevector_{2}\left(\state'\right)\right\rvert \notag \\
+    	&\leq\discount\sum_{\state'}\transition\policyscript\left(\state'\middle\vert\state\right)\max_{\state''}\left\lvert\valuevector_{1}\left(\state''\right)-\valuevector_{2}\left(\state''\right)\right\rvert \notag \\
+    	&\overset{(b)}{=}\discount\sum_{\state'}\transition\policyscript\left(\state'\middle\vert\state\right)\left\lvert\left\lvert\valuevector_{1}-\valuevector_{2}\right\rvert\right\rvert_{\infty} \notag \\
+    	&\overset{(c)}{=}\discount\left\lvert\left\lvert\valuevector_{1}-\valuevector_{2}\right\rvert\right\rvert_{\infty}.
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows from~${\transition\policyscript\left(\state'\middle\vert\state\right)>0}$, for all~${\state}$,
+	\item follows by the definition of uniform norm, and
+	\item follows from~${\sum_{\state'}\transition\policyscript\left(\state'\middle\vert\state\right)=1}$, for all~${\state}$.
+\end{enumerate*}
+
+As~\eqref{eq:bellman_expectation_contraction} is true for all~${\state}$ we can conclude that
+\begin{equation}
+	\left\lvert\left\lvert\bellmanoperator\policyscript\valuevector_{1}-\bellmanoperator\policyscript\valuevector_{2}\right\rvert\right\rvert_{\infty}\leq\discount\left\lvert\left\lvert\valuevector_{1}-\valuevector_{2}\right\rvert\right\rvert_{\infty}.
+\end{equation}
+Hence,~${\bellmanoperator\policyscript}$ is a contraction map and it has a unique fixed point. Also, from~\eqref{eq:bellman_expectation_backup} it follows that~${\left(\bellmanoperator\policyscript\statevalue\policyscript\right)\left(\state\right)=\statevalue\policyscript\left(s\right)}$ for all~${\state}$. Thus,~${\statevalue\policyscript}$ is a fixed point of~${\bellmanoperator\policyscript}$, which implies that~${\statevalue\policyscript}$ is the unique fixed point of~${\bellmanoperator\policyscript}$.
+
+\subsection{Bellman's principle of optimality}
+Bellman's principle of optimality~{\cite[Chap. III.3]{bellman1957dynamic}} states that:
+\begin{displayquote}
+``An optimal policy has the property that whatever the initial state and initial decision are, the remaining decisions must constitute an optimal policy with regard to the state resulting from the first decision.''
+\end{displayquote}
+This allows us to write the optimal state-value function as
+\begin{align} \label{eq:bellman_optimality_state_value}
+	\statevalue\optimal\left(\state\right)
+		&\doteq\max_{\policy}\statevalue\policyscript\left(\state\right) \notag \\
+		&=\max_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\statevalue\optimal\left(\state'\right)\right),
+\end{align}
+and the action-value function as
+\begin{align} \label{eq:bellman_optimality_action_value}
+	\actionvalue\optimal\left(\state,\action\right)
+		&\doteq\max_{\policy}\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&=\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\max_{\action'}\actionvalue\optimal\left(\state',\action'\right).
+\end{align}
+Equations~\eqref{eq:bellman_optimality_state_value} and~\eqref{eq:bellman_optimality_action_value} are the Bellman optimality equations for~${\statevalue\optimal}$ and~${\actionvalue\optimal}$. Often they are simply referred to as the Bellman equations. We will not go through the full derivation, nor the proof of their existence and uniqueness, as they require a fair amount of work. As before, we can express the state-value function with respect to the action-value function, and vice versa, as follows:
+\begin{equation}
+\begin{split}
+	\statevalue\optimal\left(\state\right)&=\max_{\action}\actionvalue\optimal\left(\state,\action\right), \\
+	\actionvalue\optimal\left(\state,\action\right)&=\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\statevalue\optimal\left(\state'\right).
+\end{split}
+\end{equation}
+
+We also define the Bellman optimality backup operator~${\bellmanoperator\optimal}$ as
+\begin{equation}
+	\left(\bellmanoperator\optimal\valuevector\right)\left(\state\right)\doteq\max_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\valuevector\left(\state'\right)\right).
+\end{equation}
+The Bellman optimality backup operator has analogous properties to those of the Bellman expectation backup operator. In fact, it is a contraction map, and its unique fixed point is~${\statevalue\optimal}$.
+
+\section{Dynamic programming} \label{sec:dp}
+In this section we will see how MDPs can be solved by using the Bellman equations defined in the previous section as update rules. This class of methods are known as dynamic programming~(DP)~{\cite{bellman1957dynamic}} methods.
+
+\subsection{Policy evaluation}
+We will first consider the problem of computing the value of a given policy~${\policy}$,~${\statevalue\policyscript}$. This problem is known as policy evaluation, since the objective is to evaluate the policy. It is also sometimes called the prediction problem. Since the Bellman expectation equation for~${\statevalue\policyscript}$~\eqref{eq:bellman_expectation_state_value} is linear, and we assume to be in the case of finite MDPs, the prediction problem can be solved directly through matrix inversion. Unfortunately, matrix inversion has a complexity of~${O\left(\left\lvert\statespace\right\rvert^{3}\right)}$. Thus, it is too costly for large state spaces.
+
+As mentioned already, we can instead turn the Bellman expectation equation for~${\statevalue\policyscript}$~\eqref{eq:bellman_expectation_state_value} into an iterative update rule, as follows:
+\begin{equation}
+\begin{split}
+    \estimatestatevalue_{0}\left(\state\right)&\gets0 \\
+    \estimatestatevalue_{\indexletter+1}\left(\state\right)&\gets\sum_{\action}\policy\left(\action\middle\vert\state\right)\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\estimatestatevalue_{\indexletter}\left(\state'\right)\right).
+\end{split}
+\end{equation}
+Since update rule for ${\estimatestatevalue_{\indexletter+1}}$ is the application of the Bellman expectation backup operator, which we know to be a contraction map with~${\statevalue\policyscript}$ as its unique fixed point, this method converges to~${\statevalue\policyscript}$ as~${\indexletter\rightarrow\infty}$. This method is called iterative policy evaluation. The pseudo-code is presented in Algorithm~\ref{alg:iterative_policy_evaluation}.
+\begin{algorithm}
+	\caption{Iterative policy evaluation, estimating~${\estimatestatevalue\approx\statevalue\policyscript}$}
+	\label{alg:iterative_policy_evaluation}
+
+	\Function{$\textup{\textsc{PolicyEvaluation}}\left(\policy,\threshold\right)$}{
+		$\estimatestatevalue\left(\state\right)\gets0$, $\estimatestatevalue'\left(\state\right)\gets\infty$, for all $\state$\;
+		\While{$\left\lvert\left\lvert\estimatestatevalue-\estimatestatevalue'\right\rvert\right\rvert_{\infty}>\threshold$}{
+			$\estimatestatevalue'\gets\estimatestatevalue$\;
+			$\estimatestatevalue\left(\state\right)\gets\sum_{\action}\policy\left(\action\middle\vert\state\right)\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state\right)\estimatestatevalue'\left(\state'\right)\right)$, for all $\state$\;
+		}
+		\KwRet{$\estimatestatevalue$}\;
+	}
+\end{algorithm}
+
+\subsection{Policy improvement}
+Once a policy has been evaluated, we can generate a better (deterministic) policy,~${\policy'}$, by acting greedily with respect to the computed value~${\statevalue\policyscript}$,
+\begin{align} \label{eq:policy_improvement}
+	\policy'\left(\state\right)
+		&\doteq\argmax_{\action}\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&=\argmax_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\statevalue\policyscript\left(\state'\right)\right).
+\end{align}
+Clearly,~${\policy'}$ improves the value from any state over one step. We can formalize the improvement as the following inequality:
+\begin{equation} \label{eq:policy_improvement_inequality}
+	\actionvalue\policyscript\left(\state,\policy'\left(\state\right)\right)=\max_{\action}\actionvalue\policyscript\left(\state,\action\right)\geq\actionvalue\policyscript\left(\state,\policy\left(\state\right)\right)=\statevalue\policyscript\left(\state\right).
+\end{equation}
+We will now prove that the value also improves over all future steps, by applying~\eqref{eq:policy_improvement_inequality} to each one the future steps, as follows:
+\begin{align}
+	\statevalue\policyscript\left(\state\right)
+		&\leq\actionvalue\policyscript\left(\state,\policy'\left(\state\right)\right) \notag \\
+		&=\mathbb{E}\left[\randomreward_{\timestep+1}+\discount\statevalue\policyscript\left(\randomstate_{\timestep+1}\right)\middle\vert\randomstate_{\timestep}=\state,\randomaction_{\timestep}=\policy'\left(\state\right)\right] \notag \\
+		&=\mathbb{E}_{\policy'}\left[\randomreward_{\timestep+1}+\discount\statevalue\policyscript\left(\randomstate_{\timestep+1}\right)\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&\leq\mathbb{E}_{\policy'}\left[\randomreward_{\timestep+1}+\discount\actionvalue\policyscript\left(\randomstate_{\timestep+1},\policy'\left(\randomstate_{\timestep+1}\right)\right)\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&=\mathbb{E}_{\policy'}\left[\randomreward_{\timestep+1}+\discount\mathbb{E}\left[\randomreward_{\timestep+2}+\discount\statevalue\policyscript\left(\randomstate_{\timestep+2}\right)\middle\vert\randomstate_{\timestep+1},\randomaction_{\timestep+1}=\policy'\left(\randomstate_{\timestep+1}\right)\right]\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&=\mathbb{E}_{\policy'}\left[\randomreward_{\timestep+1}+\discount\randomreward_{\timestep+2}+\discount^{2}\statevalue\policyscript\left(\randomstate_{\timestep+2}\right)\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&\leq\mathbb{E}_{\policy'}\left[\randomreward_{\timestep+1}+\discount\randomreward_{\timestep+2}+\discount^{2}\randomreward_{\timestep+3}+\discount^{3}\statevalue\policyscript\left(\randomstate_{\timestep+3}\right)\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&\vdots \notag \\
+		&\leq\mathbb{E}_{\policy'}\left[\randomreward_{\timestep+1}+\discount\randomreward_{\timestep+2}+\discount^{2}\randomreward_{\timestep+3}+\dots\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&=\statevalue\script{\policy'}\left(\state\right).
+\end{align}
+If improvement stops, we have that
+\begin{equation}
+	\actionvalue\policyscript\left(\state,\policy'\left(\state\right)\right)=\max_{\action}\actionvalue\policyscript\left(\state,\action\right) =
+	\actionvalue\policyscript\left(\state,\policy\left(\state\right)\right)=\statevalue\policyscript\left(\state\right),
+\end{equation}
+which satisfies the Bellman optimality equation, since
+\begin{equation}
+	\statevalue\policyscript\left(\state\right)=\max_{\action}\actionvalue\policyscript\left(\state,\action\right).
+\end{equation}
+Hence, improvement stops only when~${\statevalue\policyscript=\statevalue\optimal}$. This method is called policy improvement. The pseudo-code is outlined in Algorithm~\ref{alg:policy_improvement}.
+\begin{algorithm}
+	\caption{Policy improvement, computing~${\policy}$ by acting greedily w.r.t.~${\estimatestatevalue}$}
+	\label{alg:policy_improvement}
+
+	\Function{$\textup{\textsc{PolicyImprovement}}\left(\estimatestatevalue\right)$}{
+		$\policy\left(\state\right)\gets\argmax_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\estimatestatevalue\left(\state'\right)\right)$, for all $\state$\;
+		\KwRet{$\policy$}\;
+	}
+\end{algorithm}
+
+\subsection{Policy iteration}
+Policy iteration~{\cite{howard1960dynamic}} is an iterative algorithm which interleaves policy evaluation with policy improvement, until convergence to an optimal policy is reached. At each step, the value is approximated to the true value of the current policy, while the policy is improved towards optimality. The pseudo-code of this algorithm is shown in Algorithm~\ref{alg:policy_iteration}.
+\begin{algorithm}
+	\caption{Policy iteration, estimating~${\policy\approx\policy\optimal}$}
+	\label{alg:policy_iteration}
+
+	\Function{$\textup{\textsc{PolicyIteration}}\left(\threshold\right)$}{
+		$\policy\gets\textup{initialized randomly}$\;
+		\While{$\textup{true}$}{
+			$\estimatestatevalue\gets\textsc{PolicyEvaluation}(\policy,\threshold)$\;
+			$\policy'\gets\textsc{PolicyImprovement}(\estimatestatevalue)$\;
+			\If{$\policy'\left(\state\right)=\policy\left(\state\right)~\textup{for all}~\state$}{
+				\KwRet{$\policy$} \Comment*[r]{reached optimal policy}
+			}
+			$\policy\gets\policy'$\;
+		}
+	}
+\end{algorithm}
+
+The sequence of steps in policy iteration can be represented in the following way:
+\begin{equation*}
+	\policy_{0}\xrightarrow{E}\statevalue\script{\policy_{0}}\xrightarrow{I}
+	\policy_{1}\xrightarrow{E}\statevalue\script{\policy_{1}}\xrightarrow{I}
+	\policy_{2}\xrightarrow{E}\dots\xrightarrow{I}
+	\policy\optimal\xrightarrow{E}\statevalue\script{\policy\optimal},
+\end{equation*}
+where~${\xrightarrow{E}}$ denotes a step of policy evaluation, and~${\xrightarrow{I}}$ denotes a step of policy iteration. Almost all reinforcement learning methods can be described through this framework, which takes the name generalized policy iteration~(GPI).
+
+\subsection{Value iteration} \label{sec:value_iteration}
+The control problem can alternatively be solved by using the Bellman optimality equation for~${\statevalue\optimal}$~\eqref{eq:bellman_optimality_state_value}, instead of the Bellman expectation equation for~${\statevalue\policyscript}$~\eqref{eq:bellman_expectation_state_value}. The equation is non-linear, meaning that it cannot be solved directly through matrix inversion. However, we can once again turn it into an iterative update rule, as follows:
+\begin{equation}
+\begin{split}
+	\estimatestatevalue_{0}\left(\state\right)&\gets0 \\
+	\estimatestatevalue_{\indexletter+1}\left(\state\right)&\gets\max_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\estimatestatevalue_{\indexletter}\left(\state'\right)\right).
+\end{split}
+\end{equation}
+This method is called value iteration~{\cite{bellman1957dynamic}}. Intuitively, this update rule can be seen as both policy evaluation and policy improvement in one. Once again, since the update rule for~${\estimatestatevalue_{\indexletter+1}}$ is the application of the Bellman optimality backup operator, we know that it will converge to~${\statevalue\optimal}$. Once the optimal value has been estimated, the optimal policy can be found by acting greedily with respect to it, as per~\eqref{eq:policy_improvement}. The pseudo-code is given in Algorithm~\ref{alg:value_iteration}.
+\begin{algorithm}
+	\caption{Value iteration, estimating~${\policy\approx\policy\optimal}$}
+	\label{alg:value_iteration}
+	
+	\Function{$\textup{\textsc{ValueIteration}}\left(\threshold\right)$}{
+		$\estimatestatevalue\left(\state\right)\gets0$, $\estimatestatevalue'\left(\state\right)\gets\infty$, for all $\state$\;
+		\While{$\left\lvert\left\lvert\estimatestatevalue-\estimatestatevalue'\right\rvert\right\rvert_{\infty}>\threshold$}{
+			$\estimatestatevalue'\gets\estimatestatevalue$\;
+			$\estimatestatevalue\left(\state\right)\gets\max_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\estimatestatevalue'\left(\state'\right)\right)$, for all $\state$\;
+		}
+		$\policy\left(\state\right)\gets\argmax_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\estimatestatevalue\left(\state'\right)\right)$, for all $\state$\;
+		\KwRet{$\policy$}\;
+	}
+\end{algorithm}
+
+\subsection{Efficiency of dynamic programming methods}
+Up until now, we based our algorithms on state-value functions, which have complexity~${O\left(\left\lvert\statespace\right\rvert^{2}\left\lvert\actionspace\right\rvert\right)}$ per iteration, for both policy and value iteration. The same ideas can also be easily applied to action-value functions, which instead result in a complexity of~${O\left(\left\lvert\statespace\right\rvert^{2}\left\lvert\actionspace\right\rvert^{2}\right)}$ per iteration.
+
+The aptly named curse of dimensionality~\cite{bellman1957dynamic} describes one of the main problems which limits the applicability of dynamic programming methods: the number of states grows exponentially with the number of state variables, possibly rendering even a single Bellman update too expensive. Nevertheless, thanks to the capabilities of modern computers, dynamic programming can still be used effectively in problems with millions of states.
+
+Dynamic programming methods are still very efficient when compared to other methods for solving MDPs. In fact, they are guaranteed to find an optimal policy in polynomial time even though the space of all possible deterministic policies has dimension~${\left\lvert\statespace\right\rvert^{\left\lvert\actionspace\right\rvert}}$. In practice, both policy iteration and value iteration are used, with no particular evidence regarding which one is best.
+
+Starting from the next chapter, we will see reinforcement learning methods. Reinforcement learning methods also attempt to solve MDPs, but do so without relying on the unrealistic assumption of perfect knowledge of the model of the environment. Either because it is actually not known, or because it would be too expensive to do full-width backups.

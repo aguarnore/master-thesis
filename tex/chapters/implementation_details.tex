@@ -1,0 +1,46 @@
+\chapter{Implementation details}
+In this appendix we will briefly present the structure of the implementation, as well as Gym, the library used for simulating the environments.
+
+\section{Structure of the implementation}
+The main directory is the \texttt{core} folder. It contains the generic classes for the agents, and the implementation of both the value functions, the policies, and the learning rates.
+
+Figure~\ref{fig:agent_hierarchy} shows the hierarchy of agents. The generic dynamic programming agent has a \texttt{solve()} method which does policy evaluation and policy improvement iteratively until convergence. In the case of the reinforcement learning agents, the difference between the classes is in the arguments of the method, and what needs to be initialized (either a value function, a policy, or both). Monte Carlo methods, i.e., first- and every-visit Monte Carlo, and REINFORCE, inherit from both the \texttt{MonteCarloAgent} class as well as the \texttt{ValueBasedAgent} class for the first two, or the \texttt{PolicyBasedAgent} class for REINFORCE.
+\begin{figure}
+\centering
+\begin{tikzpicture}[level distance=50,scale=0.8]
+\Tree
+[.\texttt{Agent}
+    [.\texttt{DPAgent} ]
+    [.\texttt{RLAgent}
+        [.\texttt{MonteCarloAgent} ]
+        [.\texttt{ValueBasedAgent} ]
+        [.\texttt{PolicyBasedAgent} ]
+    ]
+]
+\end{tikzpicture}
+\caption{The agent hierarchy.}
+\label{fig:agent_hierarchy}
+\end{figure}
+
+The actual implementations of the methods are in the \texttt{agents} directory. The reinforcement learning agents are trained through the \texttt{train()} method of the \texttt{RLAgent} class. In turn, this method repeatedly calls the \texttt{episode()} method, which trains the agent for one episode. In most cases, the implementation of the whole agent simply lies in the implementation of one episode of training.
+
+The \texttt{core} folder also contains the implementation of the value functions (both state- and action-value functions, either represented by a matrix, or linearly approximated by a weight vector), the policies (a tabular one for dynamic programming, an implicitly derived one for value-based agents, and a parameterized one for policy-based agents), and the step size. The step size can be constant, linearly decaying, or exponentially decaying. The linearly decaying learning sequence of step sizes takes the form
+\begin{equation}
+    h_{\indexletter}\doteq\frac{h_{0}}{1+\left(d\cdot\indexletter\right)},
+\end{equation}
+where~${h_{0}}$ is some initial value,~${d}$ is a decay factor, and~${\indexletter}$ denotes the current episode. Unless otherwise noted, values of~${\robbinsmonro}$ (Robbins-Monro sequences of step sizes for value-based methods),~$\gradientstep$ (learning rate for gradient methods), and~${\varepsilon}$ (${\varepsilon}$-greedy policies) are computed using this definition.
+
+\section{OpenAI Gym}
+The environments are emulated using OpenAI Gym~{\cite{brockman2016gym}}, which is a suite of environments written in Python. We will now introduce it in brief.
+
+Dynamic programming methods simply access the environment's dictionary \texttt{P} which, for each state and each possible action in that state, has a list of tuples, each containing:
+\begin{enumerate*}[label=\arabic*)]
+    \item the probability of transitioning to a certain next state;
+    \item the next state in question;
+    \item the reward associated with the transition;
+    \item a boolean indicating whether a terminal state was reached.
+\end{enumerate*}
+
+In reinforcement learning methods the interaction between agent and environment takes place through the \texttt{step()} method, which accepts an action, and returns a tuple similar to the previous, without the transition probability, and the addition of a boolean indicating whether the execution of the environment was truncated (generally because of a time limit).
+
+When an environment has terminated it can be reset to its initial state via the \texttt{reset()} method. Additionally, the environment can be rendered visually with the \texttt{render()} method. The environments can also be customized by setting a predefined wrapper class as parent of our class. For example, this has been used to implement both discretized and featurized states.

@@ -1,0 +1,25 @@
+% MSE plot
+%   #1: title
+%   #2: y label
+%   #3: x max
+%   #4: ymax
+%   #5: y ticks
+%   #6: width
+\newenvironment{mseplot}[6]
+{
+    \begin{tikzpicture}
+    \begin{axis}[
+        my cycle list, my axis, my scaling,
+        title={#1},
+        xlabel={Episodes},
+        ylabel={#2},
+        xmin=0, xmax={#3}, ymin=0, ymax={#4},
+        ytick={#5},
+        width={#6},
+        scaled y ticks=false,
+    ]
+}
+{
+    \end{axis}
+    \end{tikzpicture}
+}

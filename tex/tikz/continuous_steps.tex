@@ -1,0 +1,20 @@
+\begin{tikzpicture}
+    \begin{axis}[
+        my cycle list, my axis, my scaling, my full width, my anchored legend,
+        xlabel=Episodes,
+        ylabel=Steps,
+        ytick={150, 500, 3000, 8000},
+        ymode=log,
+        xmax=500, ymin=100, ymax=8000,
+        log ticks with fixed point,
+    ]
+        \addplot+ table [x=episode, y=steps] {tikz/data/continuous_state/sarsa_continuous.dat};
+        \addlegendentry{SARSA};
+
+        \addplot+ table [x=episode, y=steps] {tikz/data/continuous_state/qlearning_continuous.dat};
+        \addlegendentry{Q-learning};
+
+        \addplot+ table [x=episode, y=steps] {tikz/data/continuous_state/actorcritic_continuous.dat};
+        \addlegendentry{One-step actor-critic};
+    \end{axis}
+\end{tikzpicture}

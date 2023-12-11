@@ -1,0 +1,26 @@
+\begin{tikzpicture}
+\begin{axis}[
+    my full width, my samples,
+    xmin=-1, xmax=1, ymin=-0.5, ymax=1,
+    x axis line style={draw=none},
+    y axis line style={draw=none},
+    xtick={\empty},
+    ytick={\empty},
+    scale only axis,
+    axis equal image
+]
+    \draw[
+        rounded corners=1.7mm,
+        rotate around={32:(0, 0)},
+        draw=none,
+        fill={rgb, 255:
+            red,   220;
+            green, 220;
+            blue,  220
+        }
+    ]
+        (-0.075, -0.075) rectangle (0.75, 0.075);
+    \draw[draw=none, fill=black] (0, 0) circle (0.025);
+    \draw[thick, ->, >=stealth] (0, 0.2) arc (90:360:0.2);
+\end{axis}
+\end{tikzpicture}

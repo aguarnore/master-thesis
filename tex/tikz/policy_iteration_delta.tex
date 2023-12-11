@@ -1,0 +1,21 @@
+\begin{tikzpicture}
+\begin{axis}[
+    my cycle list, my axis, my scaling, my full width, my anchored legend,
+    xlabel=Full sweeps of the state space,
+    ylabel=${\left\lvert\left\lvert\estimatestatevalue-\estimatestatevalue'\right\rvert\right\rvert_{\infty}}$,
+    xmin=1, xmax=1e5, ymin=1e-3, ymax=250,
+    xmode=log, ymode=log,
+]
+    \addplot+ table[x=sweep, y=delta] {tikz/data/policy_iteration_delta/0_9.dat};
+    \addlegendentry{$\discount=0.9$};
+
+    \addplot+ table[x=sweep, y=delta] {tikz/data/policy_iteration_delta/0_95.dat};
+    \addlegendentry{$\discount=0.95$};
+
+    \addplot+ table[x=sweep, y=delta] {tikz/data/policy_iteration_delta/0_99.dat};
+    \addlegendentry{$\discount=0.99$};
+
+    \addplot+ table[x=sweep, y=delta] {tikz/data/policy_iteration_delta/1.dat};
+    \addlegendentry{$\discount=1$};
+\end{axis}
+\end{tikzpicture}

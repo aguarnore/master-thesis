@@ -1,0 +1,21 @@
+\begin{tikzpicture}
+\begin{axis}[
+    my cycle list, my axis, my scaling, my full width, my anchored legend, my samples,
+    xlabel={$\left\lvert\left\lvert\state-\rbfcenter\right\rvert\right\rvert$},
+    ylabel={$\featurevectorcomponent\left(\state\right)$},
+    xmin=-1, xmax=1, ymin=0, ymax=1,
+    domain=-1:1,
+]
+    \addplot+ {e^(-(0.5 * x)^2)};
+    \addlegendentry{\small{$\rbfwidth=0.5$}};
+
+    \addplot+ {e^(-(1 * x)^2)};
+    \addlegendentry{\small{$\rbfwidth=1$}};
+
+    \addplot+ {e^(-(2 * x)^2)};
+    \addlegendentry{\small{$\rbfwidth=2$}};
+
+    \addplot+ {e^(-(10 * x)^2)};
+    \addlegendentry{\small{$\rbfwidth=10$}};
+\end{axis}
+\end{tikzpicture}

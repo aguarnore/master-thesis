@@ -1,0 +1,30 @@
+\begin{mseplot}{${\robbinsmonro}=0.01$}{MSE}{10000}{6e-2}{}{0.24\linewidth}
+    \pgfplotsset{cycle list shift=2}
+    \addplot+ table [x=episode, y=mse] {tikz/data/alpha/0_01_alpha.dat};
+    \pgfplotsset{cycle list shift=1}
+    \addplot+[solid, opacity=0.3, name path=top] table [x=episode, y=top] {tikz/data/alpha/0_01_alpha.dat};
+    \pgfplotsset{cycle list shift=0}
+    \addplot+[solid, opacity=0.3, name path=bottom] table [x=episode, y=bottom] {tikz/data/alpha/0_01_alpha.dat};
+    \pgfplotsset{cycle list shift=-1}
+    \addplot+[fill opacity=0.1] fill between[of=top and bottom];
+\end{mseplot}
+\begin{mseplot}{${\robbinsmonro}=0.15$}{}{10000}{6e-2}{\empty}{0.24\linewidth}
+    \pgfplotsset{cycle list shift=2}
+    \addplot+ table [x=episode, y=mse] {tikz/data/alpha/0_15_alpha.dat};
+    \pgfplotsset{cycle list shift=1}
+    \addplot+[solid, opacity=0.3, name path=top] table [x=episode, y=top] {tikz/data/alpha/0_15_alpha.dat};
+    \pgfplotsset{cycle list shift=0}
+    \addplot+[solid, opacity=0.3, name path=bottom] table [x=episode, y=bottom] {tikz/data/alpha/0_15_alpha.dat};
+    \pgfplotsset{cycle list shift=-1}
+    \addplot+[fill opacity=0.1] fill between[of=top and bottom];
+\end{mseplot}
+\begin{mseplot}{${\robbinsmonro}=0.30$}{}{10000}{6e-2}{\empty}{0.24\linewidth}
+    \pgfplotsset{cycle list shift=2}
+    \addplot+ table [x=episode, y=mse] {tikz/data/alpha/0_30_alpha.dat};
+    \pgfplotsset{cycle list shift=1}
+    \addplot+[solid, opacity=0.3, name path=top] table [x=episode, y=top] {tikz/data/alpha/0_30_alpha.dat};
+    \pgfplotsset{cycle list shift=0}
+    \addplot+[solid, opacity=0.3, name path=bottom] table [x=episode, y=bottom] {tikz/data/alpha/0_30_alpha.dat};
+    \pgfplotsset{cycle list shift=-1}
+    \addplot+[fill opacity=0.1] fill between[of=top and bottom];
+\end{mseplot}

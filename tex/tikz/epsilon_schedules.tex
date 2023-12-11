@@ -1,0 +1,21 @@
+\begin{tikzpicture}
+\begin{axis}[
+    my cycle list, my axis, my scaling, my full width, my anchored legend, my samples,
+    xlabel={Episodes},
+    ylabel={$\varepsilon$},
+    xmin=0, xmax=30000, ymin=-0.01, ymax=1,
+    domain=1:30000,
+]
+    \addplot+ {0.2};
+    \addlegendentry{\small{Constant, $0.2$}};
+
+    \addplot+ {0.8/(1+(1e-2*x))};
+    \addlegendentry{\small{Linear, decay: $10^{-2}$}};
+
+    \addplot+ {0.8/(1+(1e-3*x))};
+    \addlegendentry{\small{Linear, decay: $10^{-3}$}};
+
+    \addplot+ {0.8/(1+(1e-4*x))};
+    \addlegendentry{\small{Linear, decay: $10^{-4}$}};
+\end{axis}
+\end{tikzpicture}

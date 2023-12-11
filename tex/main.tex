@@ -1,0 +1,77 @@
+%% Preamble
+\documentclass[
+	final,
+	12pt,
+	fleqn
+]{masterthesis}
+
+% Packages
+\usepackage[right=6em, left=6em]{geometry}  % set up margin
+\usepackage[bookmarks, final]{hyperref}     % clickable references (with file outline in .pdf)
+\usepackage{titlesec}                       % part header and its text in the same page
+\usepackage{amsmath}                        % equations and aligned multi-line equations
+\usepackage{amssymb}                        % mathematical symbols
+\usepackage[inline]{enumitem}               % inline enumeration
+\usepackage{csquotes}                       % quotes
+\usepackage{subcaption}                     % subfigures
+\usepackage{tikz}                           % plots
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}                  % tables from files
+\usepackage{booktabs}                       % horizontal rules in tables
+\usepackage{multirow}                       % span table content over multiple rows
+\usepackage{tikz-qtree}                     % trees
+\usepackage[title,titletoc]{appendix}       % appendices
+\usepackage[ruled,vlined]{algorithm2e}      % pseudocode
+
+% Notes to self command
+\usepackage{color}
+\newenvironment{nts}{\begingroup\color{red}}{\endgroup}
+
+% Title page parameters
+\title{
+	From Dynamic Programming to Reinforcement Learning \\
+	\large{Computational Aspects}
+}
+\author{Andrea Guarnore}
+\advisor{Alessandro Verri}
+\secondadvisor{Agnese Seminara}
+\examiner{Francesca Odone}
+\submitmonth{September}
+\submityear{2022}
+
+% Auxiliary stuff
+\input{auxiliary/algorithms}  % add all global settings
+\input{auxiliary/notation}
+\input{auxiliary/operators}
+\input{auxiliary/mymasterthesis}
+\input{auxiliary/plots}
+\input{auxiliary/environments}  % add custom environments
+
+
+\begin{document}
+
+% Title page
+\maketitle
+
+% Front matter
+\frontmatter
+\input{chapters/front_matter}
+
+% Main matter
+\mainmatter
+\input{chapters/introduction}
+\input{chapters/optimal_control}
+\input{chapters/value_based_rl}
+\input{chapters/policy_based_rl}
+\input{chapters/empirical_results}
+\input{chapters/conclusions}
+
+% Back matter
+\backmatter
+\begin{appendices}
+\input{chapters/implementation_details}
+\end{appendices}
+\bibliographystyle{unsrt}
+\bibliography{bib}
+
+\end{document}

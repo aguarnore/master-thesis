@@ -1,0 +1,119 @@
+% \begin{tikzpicture}
+%     \begin{axis}[
+%         my cycle list, my axis, my scaling,
+%         title=${\rbfwidth=5}$,
+%         xlabel=Episodes,
+%         ylabel=Steps,
+%         ytick={150, 500, 3000, 8000},
+%         ymode=log,
+%         xmax=500, ymin=100, ymax=8000,
+%         log ticks with fixed point,
+%         width=0.27\linewidth,
+%     ]
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/5_gamma_100_features.dat};
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/5_gamma_500_features.dat};
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/5_gamma_1000_features.dat};
+%     \end{axis}
+% \end{tikzpicture}
+% \begin{tikzpicture}
+%     \begin{axis}[
+%         my cycle list, my axis, my scaling,
+%         title=${\rbfwidth=10}$,
+%         ytick={\empty},
+%         ymode=log,
+%         xmax=500, ymin=100, ymax=8000,
+%         log ticks with fixed point,
+%         xlabel=Episodes,
+%         width=0.27\linewidth,
+%     ]
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/10_gamma_100_features.dat};
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/10_gamma_500_features.dat};
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/10_gamma_1000_features.dat};
+%     \end{axis}
+% \end{tikzpicture}
+% \begin{tikzpicture}
+%     \begin{axis}[
+%         my cycle list, my axis, my scaling,
+%         title=${\rbfwidth=25}$,
+%         ytick={\empty},
+%         ymode=log,
+%         xmax=500, ymin=100, ymax=8000,
+%         log ticks with fixed point,
+%         xlabel=Episodes,
+%         width=0.27\linewidth,
+%         legend style={
+%             font=\scriptsize,
+%             at={(0.5,1)},
+%             anchor=north,
+%             cells={anchor=west}
+%         },
+%     ]
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/25_gamma_100_features.dat};
+%         \addlegendentry{100 features};
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/25_gamma_500_features.dat};
+%         \addlegendentry{500 features};
+%         \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/25_gamma_1000_features.dat};
+%         \addlegendentry{1000 features};
+%     \end{axis}
+% \end{tikzpicture}
+
+\begin{tikzpicture}
+    \begin{axis}[
+        my cycle list, my axis, my scaling,
+        title=100 features,
+        xlabel=Episodes,
+        ylabel=Steps,
+        xtick={0,250,500},
+        ytick={150, 500, 3000, 8000},
+        ymode=log,
+        xmax=500, ymin=100, ymax=8000,
+        log ticks with fixed point,
+        width=0.25\linewidth,
+    ]
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/5_gamma_100_features.dat};
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/10_gamma_100_features.dat};
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/25_gamma_100_features.dat};
+    \end{axis}
+\end{tikzpicture}
+\begin{tikzpicture}
+    \begin{axis}[
+        my cycle list, my axis, my scaling,
+        title=500 features,
+        xtick={0,250,500},
+        ytick={\empty},
+        ymode=log,
+        xmax=500, ymin=100, ymax=8000,
+        log ticks with fixed point,
+        xlabel=Episodes,
+        width=0.25\linewidth,
+    ]
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/5_gamma_500_features.dat};
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/10_gamma_500_features.dat};
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/25_gamma_500_features.dat};
+    \end{axis}
+\end{tikzpicture}
+\begin{tikzpicture}
+    \begin{axis}[
+        my cycle list, my axis, my scaling,
+        title=1000 features,
+        xtick={0,250,500},
+        ytick={\empty},
+        ymode=log,
+        xmax=500, ymin=100, ymax=8000,
+        log ticks with fixed point,
+        xlabel=Episodes,
+        width=0.25\linewidth,
+        legend style={
+            at={(0.5,1)},
+            anchor=north,
+            cells={anchor=west}
+        },
+    ]
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/5_gamma_1000_features.dat};
+        \addlegendentry{${\rbfwidth=5}$};
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/10_gamma_1000_features.dat};
+        \addlegendentry{${\rbfwidth=10}$};
+        \addplot+ table [x=episode, y=steps] {tikz/data/tuning_features/25_gamma_1000_features.dat};
+        \addlegendentry{${\rbfwidth=25}$};
+    \end{axis}
+\end{tikzpicture}

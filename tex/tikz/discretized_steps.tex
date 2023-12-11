@@ -1,0 +1,23 @@
+\begin{tikzpicture}
+   \begin{axis}[
+       my cycle list, my axis, my scaling, my full width, my anchored legend,
+       xlabel=Episodes,
+       ylabel=Steps,
+       ytick={150, 500, 3000, 8000},
+       ymode=log,
+       xmax=500, ymin=100, ymax=8000,
+       log ticks with fixed point,
+   ]
+       \addplot+ table [x=episode, y=steps] {tikz/data/discretized_state/5_bins.dat};
+       \addlegendentry{5 bins};
+
+       \addplot+ table [x=episode, y=steps] {tikz/data/discretized_state/10_bins.dat};
+       \addlegendentry{10 bins};
+
+       \addplot+ table [x=episode, y=steps] {tikz/data/discretized_state/20_bins.dat};
+       \addlegendentry{20 bins};
+
+       \addplot+ table [x=episode, y=steps] {tikz/data/discretized_state/40_bins.dat};
+       \addlegendentry{40 bins};
+   \end{axis}
+\end{tikzpicture}

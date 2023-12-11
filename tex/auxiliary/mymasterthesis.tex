@@ -1,0 +1,23 @@
+%
+% Slight modifications from the master thesis template
+%
+
+% Since the template is built upon the report class,
+% manually define front, main, and back matter
+\makeatletter
+\newcommand\frontmatter{
+    \cleardoublepage
+    \pagenumbering{Roman}
+}
+\newcommand\mainmatter{
+    \cleardoublepage
+    \pagenumbering{arabic}
+}
+\newcommand\backmatter{
+    \if@openright
+        \cleardoublepage
+    \else
+        \clearpage
+    \fi
+}
+\makeatother

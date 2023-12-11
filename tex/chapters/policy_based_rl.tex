@@ -1,0 +1,210 @@
+\chapter{Policy-based reinforcement learning} \label{ch:policy_based_rl}
+We will now introduce policy-based methods. Up to now, we presented only reinforcement learning methods that learned an action-value function, from which the target policy was implicitly derived. Policy-based methods directly optimize a stochastic policy instead.
+
+The policy is generally modeled with a parameterized function with respect to a weight vector~${\policyparameter}$, and is denoted~${\policy_{\policyparameter}\left(\action\middle\vert\state\right)}$. The goal is to find~${\policyparameter}$ that maximizes an objective function~${\objective\left(\policyparameter\right)}$. Policy-based reinforcement learning is an optimization problem. We will focus on gradient methods, even though many other approaches can be used.
+
+\section{Policy gradient}
+Policy gradient methods search for a local maximum in~${\objective\left(\policyparameter\right)}$ by ascending the gradient of the policy, with respect to the parameter vector~${\policyparameter}$,
+\begin{equation}
+	\policyparameter\gets\policyparameter+\gradientstep\nabla_{\policyparameter}\objective\left(\policyparameter\right),
+\end{equation}
+where~${\gradientstep}$ is a step size parameter. We will also assume the sequence of step sizes~${\left\{\gradientstep_{\indexletter}\right\}}$ to be a Robbins-Monro sequence, as in~\eqref{eq:robbins_monro}. The gradient~${\nabla_{\policyparameter}\objective\left(\policyparameter\right)}$ is called the policy gradient, and is defined as
+\begin{equation}
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)\doteq\left(\frac{\partial\objective\left(\policyparameter\right)}{\partial\policyparametercomponent_{1}},\dots,\frac{\partial\objective\left(\policyparameter\right)}{\partial\policyparametercomponent_{\parametersize}}\right)^{\top}.
+\end{equation}
+
+\subsection{Analytic computation}
+We will consider the simple case in which the MDP is episodic and~${\discount=1}$, although the following results can be extended to non-episodic MDPs and~${\discount<1}$. Let the objective function~${\objective\left(\policyparameter\right)}$ be the expected rewards for an episode,
+\begin{align}
+	\objective\left(\policyparameter\right)
+		&\doteq\mathbb{E}_{\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\sim\policy_{\policyparameter}}\left[\sum_{\timestep=1}^{\horizon}\randomreward_{\timestep}\right] \notag \\
+		&=\mathbb{E}_{\trajectory\sim\policy_{\policyparameter}}\left[\immediatereward\left(\trajectory\right)\right] \notag \\
+		&=\sum_{\trajectory}\transition_{\policyparameter}\left(\trajectory\right)\immediatereward\left(\trajectory\right),	
+\end{align}
+where~${\trajectory}$ is a trajectory,~${\left(\randomstate_{0},\randomaction_{0},\randomreward_{1},\randomstate_{1},\randomaction_{1},\randomreward_{2},\dots,\randomstate_{\horizon-1},\randomaction_{\horizon-1},\randomreward_{\horizon}\right)}$,~${\transition_{\policyparameter}\left(\trajectory\right)}$ denotes the probability of sampling a trajectory~${\trajectory}$ when following policy~${\policy_{\policyparameter}}$, i.e.,~${\trajectory\sim\transition_{\policyparameter}\left(\trajectory\right)}$, and~${\immediatereward\left(\trajectory\right)}$ is the sum of rewards for a trajectory~${\trajectory}$.
+
+Assuming that we can compute the policy gradient~${\nabla_{\policyparameter}\policy_{\policyparameter}\left(\action\middle\vert\state\right)}$, then we can compute the policy gradient, as follows:
+\begin{align} \label{eq:obj_function_derivative}
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)
+		&=\nabla_{\policyparameter}\sum_{\trajectory}\transition_{\policyparameter}\left(\trajectory\right)\immediatereward\left(\trajectory\right) \notag \\
+		&=\sum_{\trajectory}\nabla_{\policyparameter}\transition_{\policyparameter}\left(\trajectory\right)\immediatereward\left(\trajectory\right) \notag \\
+		&=\sum_{\trajectory}\frac{\transition_{\policyparameter}\left(\trajectory\right)}{\transition_{\policyparameter}\left(\trajectory\right)}\nabla_{\policyparameter}\transition_{\policyparameter}\left(\trajectory\right)\immediatereward\left(\trajectory\right) \notag \\
+		&=\sum_{\trajectory}\transition_{\policyparameter}\left(\trajectory\right)\immediatereward\left(\trajectory\right)\frac{\nabla_{\policyparameter}\transition_{\policyparameter}\left(\trajectory\right)}{\transition_{\policyparameter}\left(\trajectory\right)} \notag \\
+		&=\sum_{\trajectory}\transition_{\policyparameter}\left(\trajectory\right)\immediatereward\left(\trajectory\right)\nabla_{\policyparameter}\log\transition_{\policyparameter}\left(\trajectory\right) \notag \\
+		&=\mathbb{E}_{\trajectory\sim\policy_{\policyparameter}}\left[\immediatereward\left(\trajectory\right)\nabla_{\policyparameter}\log\transition_{\policyparameter}\left(\trajectory\right)\right],
+\end{align}
+where the second to last equality follows from~${\nabla\log{f\left(x\right)}=\frac{\nabla{f\left(x\right)}}{f\left(x\right)}}$ which, in turn, follows by the chain rule. This is also known as the REINFORCE trick~\cite{williams1992reinforce}.
+
+Since the expectation~${\mathbb{E}_{\trajectory\sim\policy_{\policyparameter}}\left[\cdot\right]}$ can be estimated by sample averages, we only need the derivative~${\nabla_{\policyparameter}\log\transition_{\policyparameter}\left(\trajectory\right)}$. Importantly, this derivative can be computed without knowledge of the initial state distribution, or the dynamics of the MDP. In fact, we have that
+\begin{align} \label{eq:log_derivative_trick}
+	\nabla_{\policyparameter}\log\transition_{\policyparameter}\left(\trajectory\right)
+		&=\nabla_{\policyparameter}\log\left(\initialdistribution\left(\randomstate_{0}\right)\prod_{\timestep=0}^{\horizon-1}\transition\left(\randomstate_{\timestep+1}\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right) \notag \\
+		&\overset{(a)}{=}\nabla_{\policyparameter}\left(\log\initialdistribution\left(\randomstate_{0}\right)+\sum_{\timestep=0}^{\horizon-1}\log\transition\left(\randomstate_{\timestep+1}\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)+\sum_{\timestep=0}^{\horizon-1}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right) \notag \\
+		&\overset{(b)}{=}\sum_{\timestep=0}^{\horizon-1}\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right),
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows from~${\log\left(ab\right)=\log{a}+\log{b}}$, and
+	\item follows from the fact that only the policy depends on~${\policyparameter}$.
+\end{enumerate*}
+The gradient~${\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\action\middle\vert\state\right)}$ is known as the score function. Thus, by combining~\eqref{eq:obj_function_derivative} and~\eqref{eq:log_derivative_trick}, we have that
+\begin{equation}
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)=\mathbb{E}_{\trajectory\sim\policy_{\policyparameter}}\left[\immediatereward\left(\trajectory\right)\sum_{\timestep=0}^{\horizon-1}\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right].
+\end{equation}
+
+\subsection{Policy gradient theorem}
+A more general theorem, known as the policy gradient theorem~\cite{marbach2001, sutton2000}, allows us to substitute the sum of rewards in a trajectory,~${\immediatereward\left(\trajectory\right)}$, with the action-value function,~${\actionvalue\policyscript\left(\state,\action\right)}$. Formally, the policy gradient, becomes
+\begin{equation} \label{eq:policy_gradient_theorem}
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)=\mathbb{E}_{\policy_{\policyparameter}}\left[\sum_{\timestep=0}^{\infty}\actionvalue\script{\policy_{\policyparameter}}\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right].
+\end{equation}
+This update has no bias but high variance. Many variants have been proposed in order to reduce the variance while keeping the bias unchanged~\cite{schulman2015gae}. In general, they take the form
+\begin{equation}
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)=\mathbb{E}_{\policy_{\policyparameter}}\left[\sum_{\timestep=0}^{\infty}\Psi_{\timestep}\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right].
+\end{equation}
+We will see the cases in which~${\Psi_{\timestep}}$ is the return starting at time step~${\timestep}$,~${\return_{\timestep}}$, and the TD target,~${\randomreward_{\timestep+1}+\discount\estimatestatevalue\left(\randomstate_{\timestep+1}\right)}$.
+
+\section{Differentiable policies}
+Prior to introducing any policy gradient method, we will see two kinds of policies commonly used that are differentiable with respect to the parameter vector~${\policyparameter}$.
+
+\subsection{Softmax policy}
+If the action space is discrete and not too large, the softmax function is generally used to parameterize the policy. It is defined as:
+\begin{equation} \label{eq:softmax_policy}
+	\policy_{\policyparameter}\left(\action\middle\vert\state\right)\doteq\frac{e^{\featurevector\left(\state,\action\right)^{\top}\policyparameter}}{\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}}.
+\end{equation}
+The score function can be derived as follows:
+\begin{align} \textbf{\label{eq:softmax_part1}}
+	\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\action\middle\vert\state\right)
+		&=\nabla_{\policyparameter}\log\frac{e^{\featurevector\left(\state,\action\right)^{\top}\policyparameter}}{\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}} \notag \\
+		&=\nabla_{\policyparameter}\log{e^{\featurevector\left(\state,\action\right)^{\top}}\policyparameter}-\nabla_{\policyparameter}\log\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter},
+\end{align}
+where the equality follows from~${\log\frac{a}{b}=\log{a}-\log{b}}$. The first term can be derived easily,
+\begin{equation}
+	\nabla_{\policyparameter}\log{e^{\featurevector\left(\state,\action\right)^{\top}}\policyparameter}=\nabla_{\policyparameter}\featurevector\left(\state,\action\right)^{\top}\policyparameter=\featurevector\left(\state,\action\right),
+\end{equation}
+while the second one requires a bit more work,
+\begin{align}
+	\nabla_{\policyparameter}\log\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}
+		&\overset{(a)}{=}\frac{\nabla_{\policyparameter}\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}}{\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}} \notag \\
+		&\overset{(b)}{=}\frac{\sum_{\varaction}\featurevector\left(\state,\varaction\right)e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}}{\sum_{\varaction}e^{\featurevector\left(\state,\varaction\right)^{\top}\policyparameter}} \notag \\
+		&\overset{(c)}{=}\sum_{\varaction}\featurevector\left(\state,\varaction\right)\policy_{\policyparameter}\left(\varaction\middle\vert\state\right) \notag \\
+		&=\mathbb{E}_{\policy_{\policyparameter}}\left[\featurevector\left(\state,\cdot\right)\right],
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows by the chain rule,
+	\item follows again by the chain rule, and
+	\item follows by the definition of~${\policy_{\policyparameter}}$~\eqref{eq:softmax_policy}.
+\end{enumerate*}
+Putting everything together, we have that the score function is
+\begin{equation} \label{eq:softmax_score}
+	\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\action\middle\vert\state\right)=\featurevector\left(\state,\action\right)-\mathbb{E}_{\policy_{\policyparameter}}\left[\featurevector\left(\state,\cdot\right)\right].
+\end{equation}
+
+\subsection{Gaussian policy}
+A typical choice in the case of continuous actions spaces is a Gaussian policy~\cite{williams1992reinforce}. Both the mean and the variance can be parameterized (in which case the parameter vector would be~${\policyparameter=\left(\policyparameter_{\mu},\policyparameter_{\sigma}\right)^{\top}}$), but we will assume for the variance to be fixed.
+
+Actions are sampled from a normal probability distribution,~${\action\sim\mathcal{N}\left(\mu_{\policyparameter}\left(\state\right),\sigma^{2}\right)}$, that is
+\begin{equation}
+	\policy_{\policyparameter}\left(\action\middle\vert\state\right)\doteq\frac{1}{\sigma\sqrt{2\pi}}\exp\left(-\frac{\left(\action-\mu_{\policyparameter}\left(\state\right)\right)^{2}}{2\sigma^{2}}\right),
+\end{equation}
+where the mean is a linear combination of state features,~${\mu_{\policyparameter}\left(\state\right)=\featurevector\left(\state\right)^{\top}\policyparameter}$. Thus, the score function is:
+\begin{align}
+	\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\action\middle\vert\state\right)
+		&\overset{(a)}{=}\nabla_{\policyparameter}\log\exp\left(-\frac{\left(\action-\mu_{\policyparameter}\left(\state\right)\right)^{2}}{2\sigma^{2}}\right)-\nabla_{\policyparameter}\log\frac{1}{\sigma\sqrt{2\pi}} \notag \\
+		&\overset{(b)}{=}-\frac{1}{2\sigma^{2}}\nabla_{\policyparameter}\left(\action-\mu_{\policyparameter}\left(\state\right)\right)^{2} \notag \\
+		&\overset{(c)}{=}-\frac{1}{2\sigma^{2}}\left(-2\left(\action-\mu_{\policyparameter}\left(\state\right)\right)\nabla_{\policyparameter}\mu_{\policyparameter}\left(\state\right)\right) \notag \\
+		&\overset{(d)}{=}\frac{\left(\action-\mu_{\policyparameter}\left(\state\right)\right)\featurevector\left(\state\right)}{\sigma^2}.
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows from~${\log\frac{a}{b}=\log{a}-\log{b}}$,
+	\item follows from the fact that the second term does not depend on~${\policyparameter}$,
+	\item follows by the chain rule, and
+	\item follows from~${\nabla_{\policyparameter}\mu_{\policyparameter}\left(\state\right)=\featurevector\left(\state\right)}$.
+\end{enumerate*}
+
+\section{Basic policy gradient algorithms}
+We are now ready to introduce some basic policy gradient algorithms. First, we will see REINFORCE~\cite{williams1992reinforce}, which can be simply described as Monte Carlo policy gradient. Then, we will add a critic as a simple way to reduce the variance.
+
+\subsection{REINFORCE}
+The REINFORCE algorithm uses the return~${\return_{\timestep}}$ as an unbiased sample of~${\actionvalue\policyscript\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)}$, as in value-based Monte Carlo. In particular, we will sample an episode following~${\policy_{\policyparameter}}$, then, for each time step~${\timestep}$ of the episode, we estimate the policy gradient~\eqref{eq:policy_gradient_theorem}, and update the parameter vector~${\policyparameter}$ according to stochastic gradient ascent,
+\begin{equation} \label{eq:reinforce_update}
+	\policyparameter\gets\policyparameter+\gradientstep\return_{\timestep}\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right).
+\end{equation}
+The pseudo-code for the REINFORCE algorithm is given in Algorithm~\ref{alg:reinforce}.
+\begin{algorithm}
+	\caption{REINFORCE, estimating~${\policy_{\policyparameter}\approx\policy\optimal}$}
+	\label{alg:reinforce}
+
+	\Function{$\textup{\textsc{REINFORCE}}\left(\gradientstep\right)$}{
+		$\policyparameter_{\indexletter}\gets0$, for $\indexletter\in\left\{1,\dots,\parametersize\right\}$\;
+		\Loop{}{
+			Sample an episode following $\policy_{\policyparameter}$: $\left(\randomstate_{0},\randomaction_{0},\randomreward_{1},\dots,\randomstate_{\horizon-1},\randomaction_{\horizon-1},\randomreward_{\horizon}\right)$\;
+			\ForEach{$\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$}{
+				$\return_{\timestep}\gets\sum_{\indexletter=\timestep+1}^{\horizon}\discount^{\indexletter-\timestep-1}\randomreward_{\indexletter}$\;
+				$\policyparameter\gets\policyparameter+\gradientstep\return_{\timestep}\nabla\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)$\;
+			}
+		}
+		\KwRet{$\policy_{\policyparameter}$}\;
+	}
+\end{algorithm}
+
+Of course, as a Monte Carlo method, REINFORCE has high variance. A common way to reduce variance is to introduce a baseline,~${\baseline\left(\state\right)}$, into the expectation. The baseline can be any function, as long as it does not vary with~${\action}$. The gradient now takes the form
+\begin{equation}
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)=\mathbb{E}_{\policy_{\policyparameter}}\left[\sum_{\timestep=0}^{\horizon-1}\left(\return_{\timestep}-\baseline\left(\randomstate_{\timestep}\right)\right)\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right].
+\end{equation}
+This can be done as subtracting a baseline is unbiased in expectation, in fact we have that
+\begin{align}
+	\mathbb{E}_{\policy_{\policyparameter}}\left[\nabla_{\policyparameter}\log\transition_{\policyparameter}\left(\trajectory\right)\baseline\right]
+		&=\sum_{\trajectory}\transition_{\policyparameter}\left(\trajectory\right)\nabla_{\policyparameter}\log\transition_{\policyparameter}\left(\trajectory\right)\baseline \notag \\
+		&=\sum_{\trajectory}\nabla_{\policyparameter}\transition_{\policyparameter}\left(\trajectory\right)\baseline \notag \\
+		&=\baseline\nabla_{\policyparameter}\sum_{\trajectory}\transition_{\policyparameter}\left(\trajectory\right) \notag \\
+		&=\baseline\nabla_{\policyparameter}1=0.
+\end{align}
+
+A typical choice for the baseline is the state-value function,~${\baseline\left(\state\right)=\statevalue\policyscript\left(\state\right)}$. This allows us to rewrite the policy gradient using the so-called advantage function,~${\advantage\policyscript}$,
+\begin{equation}
+\begin{split}
+	\advantage\policyscript\left(\state,\action\right)&\doteq\actionvalue\policyscript\left(\state,\action\right)-\statevalue\policyscript\left(\state\right) \\
+	\nabla_{\policyparameter}\objective\left(\policyparameter\right)&=\mathbb{E}_{\policy_{\policyparameter}}\left[\sum_{\timestep=0}^{\horizon-1}\advantage\policyscript\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)\right],
+\end{split}
+\end{equation}
+since the return is an unbiased estimate of~${\actionvalue\policyscript\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)}$. Intuitively, the advantage function measures how much better or worse it is to take action~${\action}$ in state~${\state}$, rather than randomly sampling an action according to~${\policy_{\policyparameter}\left(\cdot\middle\vert\state\right)}$. Algorithm~\ref{alg:reinforce} can be modified to use a baseline by simply replacing the return with the advantage function in the update step defined in~\eqref{eq:reinforce_update}, where the advantage function is approximated by~${\return_{\timestep}-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)}$, for some weight vector~${\valueparameter}$.
+
+\subsection{Actor-critic}
+In actor-critic methods~\cite{barto1983} we have a critic, which estimates the value function, and an actor, which updates the policy in the direction suggested by the critic.
+
+The REINFORCE algorithm with a baseline can indeed be seen as a case of actor-critic. In fact, in the case presented the baseline is an estimate of the state-value function. Alternatively, we can reduce variance and accelerate learning by using bootstrapping methods for prediction, such as the ones introduced in sections~\ref{sec:td_prediction} and~\ref{sec:td_lambda}. Of course, this is done at the cost of introducing some bias, since bootstrapping methods update their estimate based on the current estimate of subsequent states. We will only see the case for TD(0), as generalizing the concepts to TD(${\lambda}$) is straightforward. In this case the algorithm is called one-step actor-critic. We replace the full return,~${\return_{\timestep}}$, with the TD target in the gradient update, as follows:
+\begin{align}
+	\policyparameter
+		&\gets\policyparameter+\gradientstep\left(\return_{\timestep}-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right) \notag \\
+		&=\policyparameter+\gradientstep\left(\randomreward_{\timestep+1}+\discount\approximatestatevalue\left(\randomstate_{\timestep+1};\valueparameter\right)-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right) \notag \\
+		&=\policyparameter+\gradientstep\tderror_{\timestep}\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)
+\end{align}
+Algorithm~\ref{alg:actor_critic} shows the pseudo-code for the one-step actor-critic algorithm.
+\begin{algorithm}
+	\caption{One step actor-critic, estimating~${\policy_{\policyparameter}\approx\policy\optimal}$}
+	\label{alg:actor_critic}
+
+	\Function{$\textup{\textsc{OneStepActorCritic}}\left(\gradientstep_{\policyparameter},\gradientstep_{\valueparameter}\right)$}{
+		$\policyparameter_{\indexletter}\gets0$, for $\indexletter\in\left\{1,\dots,\parametersize_{\policyparameter}\right\}$\;
+		$\valueparameter_{\indexletter}\gets 0$, for $\indexletter\in\left\{1,\dots,\parametersize_{\valueparameter}\right\}$\;
+		\Loop{}{
+			$\randomstate_{0}\sim\initialdistribution\left(\cdot\right)$\;
+			\Loop{\textup{for each step of the episode}}{
+				$\randomaction_{\timestep}\sim\policy_{\policyparameter}\left(\cdot\middle\vert\randomstate_{\timestep}\right)$\;
+				$\randomstate_{\timestep+1}\sim\transition\left(\cdot\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)$, $\randomreward_{\timestep+1}\gets\immediatereward\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$\;
+				$\tderror_{\timestep}\gets\randomreward_{\timestep+1}+\discount\approximatestatevalue\left(\randomstate_{\timestep+1},\randomaction_{\timestep+1};\valueparameter\right)-\approximatestatevalue\left(\randomstate_{\timestep},\randomaction_{\timestep};\valueparameter\right)$\;
+				$\policyparameter\gets\policyparameter+\gradientstep_{\policyparameter}\tderror_{\timestep}\nabla_{\policyparameter}\log\policy_{\policyparameter}\left(\randomaction_{\timestep}\middle\vert\randomstate_{\timestep}\right)$\;
+				$\valueparameter\gets\valueparameter-\gradientstep_{\valueparameter}\tderror_{\timestep}\featurevector\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$\;
+				$\randomstate_{\timestep}\gets\randomstate_{\timestep+1}$\;
+			}
+		}
+		\KwRet{$\policy_{\policyparameter}$}\;
+	}
+\end{algorithm}
+
+\subsection{Comparison of value- and policy-based methods}
+Policy-based methods were the earliest to be studied in reinforcement learning, but they were neglected in favor of value-based methods starting from the introduction of Q-learning~\cite{watkins1989learning}. In recent years, however, several developments~\cite{peters2008, degris2012, silver2014} have shifted once again the focus on policy-gradient methods.
+
+Although policy-gradient methods generally converge locally, they still have better convergence properties than value-based methods with function approximation. Additionally, they can learn stochastic policies, which are beneficial in the case of games, since repetitive actions can be exploited by the opponents, and environments in which the observations of the state are not fully representative, as in this case some states share the same observation, thus possibly causing deterministic policies to always choose non-optimal actions. Ultimately, as we have seen, they can even be employed with both high-dimensional and continuous action spaces.

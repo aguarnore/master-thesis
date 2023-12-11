@@ -1,0 +1,367 @@
+\chapter{Value-based reinforcement learning} \label{ch:value_based_rl}
+Starting from this chapter, we will remove the assumption of perfect knowledge of the dynamics of the environment, i.e., the transition function~${\transition}$ and the reward function~${\immediatereward}$, although we will still be able to sample from these functions. By doing so, we start to delve into reinforcement learning.
+
+\section{Preliminary remarks}
+Prior to introducing any reinforcement learning methods, we will make some remarks regarding the different approaches that can be taken to solve the control problem in the reinforcement learning framework, and how removing the knowledge of both~${\transition}$ and~${\immediatereward}$ forces us to use action-value functions.
+
+\subsection{Taxonomy of reinforcement learning algorithms}
+Devising a complete and orderly taxonomy of reinforcement learning methods is not easy, but we can roughly divide them into three categories:
+\begin{enumerate*}[label=\arabic*)]
+	\item model-free value-based methods, that estimate the optimal action-value function, from which an optimal policy is implicitly derived;
+	\item model-free policy-based methods, which directly estimate an optimal policy;
+	\item model-based value-based methods, which learn the model, then apply methods such as the ones presented in the previous chapter.
+\end{enumerate*}
+
+We will focus exclusively on model-free methods, mainly because such methods require much less computation.
+
+\subsection{Control in value-based reinforcement learning}
+In this chapter, we will introduce the fundamental model-free value-based methods. Once the optimal value has been estimated, a deterministic optimal policy can be found by simply maximizing over it, in the same way we did for value iteration (Section~\ref{sec:value_iteration}).
+
+Another important point to note regarding this class of methods is the use of the action-value function for control, rather than the state-value function. This is not by choice. In fact, a model is required to improve the policy with respect to the state-value function,
+\begin{equation}
+	\policy'\left(\state\right)=\argmax_{\action}\left(\immediatereward\left(\state,\action\right)+\discount\sum_{\state'}\transition\left(\state'\middle\vert\state,\action\right)\statevalue\policyscript\left(\state'\right)\right),
+\end{equation}
+whereas a policy improvement step over the action-value function is the following:
+\begin{equation}
+	\policy'\left(\state\right)=\argmax_{\action}\actionvalue\policyscript\left(\state,\action\right),
+\end{equation}
+making it model-free.
+
+\section{Monte Carlo methods}
+All reinforcement learning problems deal with the absence of a model by learning from experience, rather than exploring all possibilities. In particular, Monte Carlo~(MC) methods use the empirical average returns, each computed over a sampled episode, as an estimate of the expected return, which is the value function~\eqref{eq:state_value}. Note that in order to compute the average return, episodes must terminate. Because of this, MC methods can only be applied to episodic MDPs.
+
+\subsection{Monte Carlo prediction}
+We will start by solving the prediction problem. There are two approaches to do so: first-visit~MC and every-visit~MC~{\cite{singhsutton1996}}. First-visit~MC estimates the value of a state as the average of the returns following the first visit to the state. So, when a state is first visited in an episode, a single empirical return is computed, regardless if the state appears in the episode again. Conversely, every-visit~MC estimates the value of a state as the average of the returns following all visits to the state. In other words, in this case, an empirical return is computed for each of the visits to the state in the episode.
+
+Due to the law of large numbers, the averages of the estimates converge to their expected value,~$\statevalue\policyscript$. The two methods have similar theoretical properties, but we will focus only on first-visit MC. Algorithm~\ref{alg:first_visit_mc_prediction} shows the pseudo-code for this case, while also using a moving average.
+\begin{algorithm}
+	\caption{First-visit Monte Carlo prediction, estimating~${\estimatestatevalue\approx\statevalue\policyscript}$}
+	\label{alg:first_visit_mc_prediction}
+
+	\Function{$\textup{\textsc{FirstVisitMCPrediction}}\left(\policy\right)$}{
+		$\timesvisited\left(\state\right)\gets0$, $\estimatestatevalue\left(\state\right)\gets0$, for all $\state$\;
+		\Loop{}{
+			Sample an episode following $\policy$: $\left(\randomstate_{0},\randomaction_{0},\randomreward_{1},\dots,\randomstate_{\horizon-1},\randomaction_{\horizon-1},\randomreward_{\horizon}\right)$\;
+			\ForEach{$\randomstate_{\timestep}$}{
+				\If{$\randomstate_{\timestep}\notin\left\{\randomstate_{0},\randomstate_{1},\dots,\randomstate_{\timestep-1}\right\}$}{
+					$\return_{\timestep}\gets\sum_{\indexletter=\timestep+1}^{\horizon}\discount^{\indexletter-\timestep-1}\randomreward_{\indexletter}$\;
+					$\timesvisited\left(\randomstate_{\timestep}\right)\gets\timesvisited\left(\randomstate_{\timestep}\right)+1$\;
+					$\estimatestatevalue\left(\randomstate_{\timestep}\right)\gets\estimatestatevalue\left(\randomstate_{\timestep}\right)+\frac{\return_{\timestep}-\estimatestatevalue\left(\randomstate_{\timestep}\right)}{\timesvisited\left(\randomstate_{\timestep}\right)}$\;
+				}
+			}
+		}
+		\KwRet{$\estimatestatevalue$}\;
+	}
+\end{algorithm}
+
+\subsection{Monte Carlo control}
+We can now apply the concept of generalized policy iteration by combining Monte Carlo prediction with policy improvement. Recall that however reinforcement learning methods do not have perfect knowledge of the dynamics of the system. Thus, it is not clear how improving the policy on an estimate of the value function would monotonically improve the policy as in the model-based case. In other words, we have to ensure exploration of all state-action pairs, even if suboptimal with respect to the current estimate of the value function.
+
+One of the simplest, yet very effective, approaches to solve this problem is that of~{$\varepsilon$-greedy} policies. Perhaps counter-intuitively given the name,~{${\varepsilon}$-greedy} policies choose the greedy action with probability~${1-\varepsilon}$, and with probability~${\varepsilon}$ they choose an action at random. Formally,
+\begin{equation}
+	\policy\left(\action\middle\vert\state\right)=\left\{
+		\begin{array}{ll}
+			\varepsilon/\lvert\actionspace\rvert+1-\varepsilon & \quad \textnormal{if}~\action=\argmax_{\varaction}\actionvalue\policyscript\left(\state,\varaction\right) \\
+			\varepsilon/\lvert\actionspace\rvert & \quad \textnormal{otherwise}.
+		\end{array}
+	\right.
+\end{equation}
+As in the case of greedy policy improvement, we can prove that for any~{${\varepsilon}$-greedy} policy~${\policy}$, the~{${\varepsilon}$-greedy} policy~${\policy'}$ improved with respect to~${\actionvalue\policyscript}$ assures that~${\statevalue\script{\policy'}\left(\state\right)\geq\statevalue\policyscript\left(\state\right)}$, for all~${\state}$. In fact, we have that
+\begin{align}
+	\actionvalue\policyscript\left(\state,\policy'\left(\state\right)\right)
+		&=\sum_{\action}\policy'\left(\action\middle\vert\state\right)\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&\overset{(a)}{=}\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\sum_{\action}\actionvalue\policyscript\left(\state,\action\right)+\left(1-\varepsilon\right)\max_{\action}\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&=\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\sum_{\action}\actionvalue\policyscript\left(\state,\action\right)+\left(1-\varepsilon\right)\max_{\action}\actionvalue\policyscript\left(\state,\action\right)\frac{1-\varepsilon}{1-\varepsilon} \notag \\
+		&\overset{(b)}{=}\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\sum_{\action}\actionvalue\policyscript\left(\state,\action\right)+\left(1-\varepsilon\right)\max_{\action}\actionvalue\policyscript\left(\state,\action\right)\sum_{\action}\frac{\policy\left(\action\middle\vert\state\right)-\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}}{1-\varepsilon} \notag \\
+		&\geq\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\sum_{\action}\actionvalue\policyscript\left(\state,\action\right)+\sum_{\action}\left(\policy\left(\action\middle\vert\state\right)-\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\right)\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&=\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\sum_{\action}\actionvalue\policyscript\left(\state,\action\right)-\frac{\varepsilon}{\left\lvert\actionspace\right\rvert}\sum_{\action}\actionvalue\policyscript\left(\state,\action\right)+\sum_{\action}\policy\left(\action\middle\vert\state\right)\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&=\sum_{\action}\policy\left(\action\middle\vert\state\right)\actionvalue\policyscript\left(\state,\action\right) \notag \\
+		&\overset{(c)}{=}\statevalue\policyscript\left(\state\right).
+\end{align}
+where
+\begin{enumerate*}[label=(\alph*)]
+	\item follows from the fact that with probability~${\varepsilon}$ we choose an action randomly, and with probability~${\left(1-\varepsilon\right)}$ we choose the greedy action with respect to~${\actionvalue\policyscript}$,
+	\item follows from~${1-\varepsilon=\sum_{\action}\left(\policy\left(\action\middle\vert\state\right)-\frac{\epsilon}{\left\lvert\actionspace\right\rvert}\right)}$, and
+	\item follows from~\eqref{eq:v_wrt_q}.
+\end{enumerate*}
+Algorithm~\ref{alg:first_visit_mc_control} gives a formulation of first-visit Monte Carlo control in pseudo-code.
+\begin{algorithm}
+	\caption{First-visit Monte Carlo control, estimating~${\policy\approx\policy\optimal}$}
+	\label{alg:first_visit_mc_control}
+
+	\Function{$\textup{\textsc{FirstVisitMC}}\left(\cdot\right)$}{
+		$\timesvisited\left(\state,\action\right)\gets0$, $\estimateactionvalue\left(\state,\action\right)\gets0$, for all $\state$, $\action$\;
+		\Loop{}{
+			Sample an episode following $\policy$: $\left(\randomstate_{0},\randomaction_{0},\randomreward_{1},\dots,\randomstate_{\horizon-1},\randomaction_{\horizon-1},\randomreward_{\horizon}\right)$ \Comment*[r]{$\varepsilon$-greedy}
+			\ForEach{$\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$}{
+				\If{$\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\notin\left\{\left(\randomstate_{0},\randomaction_{0}\right),\left(\randomstate_{1},\randomaction_{1}\right),\dots,\left(\randomstate_{\timestep-1},\randomaction_{\timestep-1}\right)\right\}$}{
+					$\return_{\timestep}\gets\sum_{\indexletter=\timestep+1}^{\horizon}\discount^{\indexletter-\timestep-1}\randomreward_{\indexletter}$\;
+					$\timesvisited\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\gets\timesvisited\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)+1$\;
+					$\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\gets\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)+\frac{\return_{\timestep}-\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)}{\timesvisited\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)}$\;
+				}
+			}
+		}
+		\KwRet{$\policy$}\;
+	}
+\end{algorithm}
+
+A formal guideline to schedule the value of~${\varepsilon}$ for~{${\varepsilon}$-greedy} policies is given by the greedy in the limit with infinite exploration~(GLIE) theorem~{\cite{singh2000}}. A sequence of policies ${\left\{\policy_{\indexletter}\right\}}$ is called GLIE if it satisfies the following conditions:
+\begin{enumerate}
+	\item All state-action pairs should be explored infinitely many times,
+		\begin{equation}
+			\lim_{\indexletter\rightarrow\infty}\timesvisited_{\indexletter}\left(\state,\action\right)=\infty,
+		\end{equation}
+		where~${\timesvisited_{\indexletter}\left(\state,\action\right)}$ denotes the times the state-action pair~${\left(\state,\action\right)}$ has been visited up to and including episode~${\indexletter}$.
+	\item The policy has to converge to a greedy policy as the number of episodes goes to infinity,
+		\begin{equation}
+			\lim_{\indexletter\rightarrow\infty}\policy_{\indexletter}\left(\action\middle\vert\state\right)=\mathbf{1}\left(\action=\argmax_{\varaction}\estimateactionvalue_{\indexletter}\left(\state,\varaction\right)\right),
+		\end{equation}
+		where~${\policy_{\indexletter}}$ and~${\estimateactionvalue_{\indexletter}}$ denote the policy and the action-value function at episode~${\indexletter}$, respectively, and~${\mathbf{1}}$ is the indicator function.
+\end{enumerate}
+A simple rule is to have, for example,~${\varepsilon}$ reduce to zero using an hyperbolic schedule, i.e.,~${\varepsilon_{\indexletter}=\frac{1}{\indexletter}}$. Monte Carlo control converges to the optimal state-action value function (and, consequently, to an optimal policy) with a GLIE sequence of policies~${\left\{\policy_{\indexletter}\right\}}$.
+
+\section{Temporal difference learning}
+Temporal difference~(TD) learning is one of the core ideas of reinforcement learning. TD methods learn from samples generated by the environment, like Monte Carlo methods, by bootstrapping from the current estimate of the value function, like dynamic programming methods.
+
+In this section we will see how MC and TD methods are related, as well as two TD control algorithms.
+
+\subsection{Temporal difference prediction} \label{sec:td_prediction}
+The prediction step is similar to the Monte Carlo prediction step in the case of a non-stationary MDP,
+\begin{equation}
+	\estimatestatevalue\left(\randomstate_{\timestep}\right)\gets\estimatestatevalue\left(\randomstate_{\timestep}\right)+\robbinsmonro\left(\return_{\timestep}-\estimatestatevalue\left(\randomstate_{\timestep}\right)\right),
+\end{equation}
+where~${\robbinsmonro}$ is a step size parameter, such that~${0<\robbinsmonro\leq1}$. Instead of updating towards the empirical return obtained during an episode,~${\return_{\timestep}}$, we update from incomplete episodes, by bootstrapping, as in dynamic programming. When updating at each time step, we have the following update rule:
+\begin{equation} \label{eq:td_update}
+	\estimatestatevalue\left(\randomstate_{\timestep}\right)\gets\estimatestatevalue\left(\randomstate_{\timestep}\right)+\robbinsmonro\left(\randomreward_{\timestep+1}+\discount\statevalue\left(\randomstate_{\timestep+1}\right)-\estimatestatevalue\left(\randomstate_{\timestep}\right)\right).
+\end{equation}
+This method is called TD(0)~{\cite{sutton1988td}}, due to the fact that the estimate is updated at every time step. The sampled reward plus the estimate of the value of the next state,~${\randomreward_{\timestep+1}+\discount\statevalue\left(\randomstate_{\timestep+1}\right)}$, is referred to as TD target. While ~${\randomreward_{\timestep+1}+\discount\estimatestatevalue\left(\randomstate_{\timestep+1}\right)-\estimatestatevalue\left(\randomstate_{\timestep}\right)}$, is called TD error, and is denoted as~${\tderror_{\timestep}}$. The TD prediction algorithm is given in pseudo-code in Algorithm~\ref{alg:td_prediction}.
+\begin{algorithm}
+	\caption{Temporal difference prediction, estimating~${\estimatestatevalue\approx\statevalue\policyscript}$}
+	\label{alg:td_prediction}
+
+	\Function{$\textup{\textsc{TDPrediction}}\left(\policy,\robbinsmonro\right)$}{
+		$\estimatestatevalue\left(\state\right)\gets0$, for all $\state$\;
+		\Loop{}{
+			$\randomstate_{\timestep}\gets\randomstate_{0}\sim\initialdistribution\left(\cdot\right)$\;
+			\Loop{\textup{for each step of the episode}}{
+				$\randomaction_{\timestep}\sim\policy\left(\cdot\middle\vert\randomstate_{\timestep}\right)$\;
+				$\randomstate_{\timestep+1}\sim\transition\left(\cdot\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)$, $\randomreward_{\timestep+1}\gets\immediatereward\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$\;
+				$\estimatestatevalue\left(\randomstate_{\timestep}\right)\gets\estimatestatevalue\left(\randomstate_{\timestep}\right)+\robbinsmonro\left(\randomreward_{\timestep+1}+\discount\estimatestatevalue\left(\randomstate_{\timestep+1}\right)-\estimatestatevalue\left(\randomstate_{\timestep}\right)\right)$\;
+				$\randomstate_{\timestep}\gets\randomstate_{\timestep+1}$\;
+			}
+		}
+		\KwRet{$\estimatestatevalue$}\;
+	}
+\end{algorithm}
+TD(0) can be proven to converge to~${\statevalue\policyscript}$ with probability 1~\cite{dayan1992}.
+
+In the previous chapter we saw that
+\begin{align}
+	\statevalue\policyscript\left(\state\right)
+		&\doteq\mathbb{E}_{\policy}\left[\return_{\timestep}\middle\vert\randomstate_{\timestep}=\state\right] \label{eq:mc_target} \\
+		&=\mathbb{E}_{\policy}\left[\randomreward_{\timestep+1}+\discount\return_{\timestep+1}\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&=\mathbb{E}_{\policy}\left[\randomreward_{\timestep+1}+\discount\mathbb{E}_{\policy}\left[\return_{\timestep+1}\middle\vert\randomstate_{\timestep+1}=\state'\right]\middle\vert\randomstate_{\timestep}=\state\right] \notag \\
+		&=\mathbb{E}_{\policy}\left[\randomreward_{\timestep+1}+\discount\statevalue\policyscript\left(\randomstate_{\timestep+1}\right)\middle\vert\randomstate_{\timestep}=\state\right], \label{eq:bootstrap_target}
+\end{align}
+where the second to last equality follows by the law of total expectation and the Markov property. Monte Carlo methods sample empirical returns to estimate~\eqref{eq:mc_target}. Dynamic programming methods use~\eqref{eq:bootstrap_target} as a target, by estimating~${\statevalue\policyscript}\left(\randomstate_{\timestep+1}\right)$ (i.e., by doing prediction) and then computing the expected value via the model of the MDP. Temporal difference methods also use~\eqref{eq:bootstrap_target} as a target, but also have to estimate the expected value, due to the fact that they are model-free.
+
+Clearly, the return,~${\return_{\timestep}}$, is an unbiased estimate of the value,~${\statevalue\policyscript\left(\randomstate_{\timestep}\right)}$, whereas the TD target,~${\randomreward_{\timestep+1}+\discount\estimatestatevalue\left(\randomstate_{\timestep+1}\right)}$, is not, since the estimate is done using the current estimate in the next state. Conversely, the MC target uses the complete return as estimate, which depends on many random actions, transitions, and rewards. Because of this, it is high variance. The TD target, however, depends solely on one random action, one random transition, and one random reward, meaning that it is much lower variance.
+
+\subsection{TD(\texorpdfstring{$\lambda$}{lambda})} \label{sec:td_lambda}
+Monte Carlo and TD(0) methods can be seen as extremes on a spectrum. The methods in-between are represented by~${n}$-step methods. The~${n}$ indicates how many steps should be taken before updating the estimate of the value function. In this case, the target for an update is the~${n}$-step return~\cite{watkins1989learning},
+\begin{equation}
+	\return_{\timestep:\timestep+n}\doteq\randomreward_{\timestep+1}+\discount\randomreward_{\timestep+2}+\dots+\discount^{n-1}\randomreward_{\timestep+n}+\discount^{n}\statevalue\left(\randomstate_{\timestep+n}\right),
+\end{equation}
+where~${\return_{\timestep:\timestep+n}}$ denotes the return from time step~${\timestep}$ to time step~${\timestep+n}$. The corresponding update will be
+\begin{equation}
+	\estimatestatevalue\left(\randomstate_{\timestep}\right)\gets\estimatestatevalue\left(\randomstate_{\timestep}\right)+\robbinsmonro\left(\return_{\timestep:\timestep+n}-\estimatestatevalue\left(\randomstate_{\timestep}\right)\right).
+\end{equation}
+
+It can be empirically shown that in general intermediate values of~${n}$ achieve better results than TD(0) or MC methods. It is however not possible to know in advance which value of~${n}$ will be better for the current task. A simple idea is to instead not only update towards any~${n}$-step return, but an average of~${n}$-step returns for different values of~${n}$. We can elegantly combine all~${n}$-step updates by updating towards a return, called~${\lambda}$-return~\cite{watkins1989learning}, which is a geometrically weighted average of all~${n}$-step returns, defined as:
+\begin{equation}
+	\return_{\timestep}^{\lambda}\doteq\left(1-\lambda\right)\sum_{n=1}^{\horizon}\lambda^{n-1}\return_{\timestep:\timestep+n},
+\end{equation}
+where~${\lambda\in\left[0,1\right]}$ is a constant which determines how much each of the following~${n}$-step returns is decayed. In particular: the one-step return will have weight~${1-\lambda}$, and at each additional step the weight is decayed by a factor of~${\lambda}$. The~${(1-\lambda)}$ is a normalizing factor, which simply makes all weights sum to 1. This method is known as~TD(${\lambda}$)~\cite{sutton1988td} and, like TD(0), it converges to~${\statevalue\policyscript}$ with probability 1~{\cite{jaakkola1994}}.
+
+This approach requires to look forward into the future in order to compute the~${\lambda}$-return at each time step. For this reason it is more specifically referred to as forward TD(${\lambda}$). A better alternative, called backward TD(${\lambda}$)~\cite{vanseijen2014}, allows us instead to compute the~${\lambda}$-return online, at each step, from incomplete episodes, while also being equivalent to forward TD(${\lambda}$). Backward TD(${\lambda}$) makes use of eligibility traces, which we will now introduce. Eligibility traces are defined as follows:
+\begin{equation}
+\begin{split}
+    \trace_{0}\left(\state\right)&=0 \\
+    \trace_{\timestep}\left(\state\right)&=\discount\lambda\trace_{\timestep-1}\left(\state\right)+\mathbf{1}\left(\randomstate_{\timestep}=\state\right).
+\end{split}
+\end{equation}
+When a state is visited the eligibility trace of that state is increased by 1. Then, the eligibility trace is decreased exponentially for each time step in which the state is not visited. Intuitively, they can be seen as a metric to decide how much each state has contributed to the reward obtained, depending on both the frequency and the recency with which the state has been visited. We can now update the estimate of the value function at each time step with respect to the TD error,~${\tderror_{\timestep}}$, and also the eligibility trace,~${\trace_{\timestep}\left(\state\right)}$, as follows:
+\begin{equation} \label{eq:td_lambda}
+	\estimatestatevalue\left(\state\right)\gets\estimatestatevalue\left(\state\right)+\robbinsmonro\tderror_{\timestep}\trace_{\timestep}\left(\state\right),~\textnormal{for all}~\state.
+\end{equation}
+When~${\lambda=0}$, it is easy to see that TD(${\lambda}$) and TD(0) are equivalent, since in this case only the current state is updated. Conversely, when~${\lambda=1}$, the credit given to previous states decreases by~${\discount}$ at each step, thus behaving like a Monte Carlo method, albeit online and with incremental updates.
+
+\subsection{Temporal difference control}
+Up to now we have only seen methods which do policy improvement on the same policy used for exploration. These methods are called on-policy methods. Off-policy methods instead have a target policy, which is the policy being evaluated and improved, and a behavior policy, from which the actions are sampled. We will now introduce SARSA~{\cite{rummery1994}} and Q-learning~{\cite{watkins1989learning}}, which are respectively on- and off-policy TD control algorithms.
+
+The SARSA update is done using the quintuple~${\left(\randomstate_{\timestep},\randomaction_{\timestep},\randomreward_{\timestep+1},\randomstate_{\timestep+1},\randomaction_{\timestep+1}\right)}$, which gives the name to the algorithm. Thus, the update rule is
+\begin{equation}
+	\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\gets\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)+\robbinsmonro\left(\randomreward_{\timestep+1}+\discount\estimateactionvalue\left(\randomstate_{\timestep+1},\randomaction_{\timestep+1}\right)-\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\right).
+\end{equation}
+As in policy iteration, we continually estimate~${\actionvalue\policyscript}$, while improving~${\policy}$ towards greediness with respect to~${\estimateactionvalue}$. SARSA can be shown to converge~{\cite{singh2000}} with a GLIE sequence of policies~${\left\{\policy_{\indexletter}\right\}}$, and a Robbins-Monro sequence of step sizes $\left\{\robbinsmonro_{\indexletter}\right\}$ such that
+\begin{equation} \label{eq:robbins_monro}
+	\sum_{\indexletter=0}^{\infty}\robbinsmonro_{\indexletter}=\infty\quad\textnormal{and}\quad\sum_{\indexletter=0}^{\infty}\robbinsmonro_{\indexletter}^{2}<\infty.
+\end{equation}
+These conditions for~${\robbinsmonro}$ are a well-known result in stochastic approximation which give us the necessary condition to ensure convergence. The pseudo-code for SARSA with TD(0) prediction is presented in Algorithm~\ref{alg:sarsa}. We will call this version one-step SARSA. Additionally, the implementation can be easily modified to support TD($\lambda$) for the prediction step by using update rule~\eqref{eq:td_lambda} instead, as well as saving eligibility traces for state-action pairs, rather than only states. SARSA with a TD(${\lambda}$) prediction step is called SARSA(${\lambda}$)~\cite{rummery1994}.
+\begin{algorithm}
+	\caption{One-step SARSA, estimating~${\policy\approx\policy\optimal}$}
+	\label{alg:sarsa}
+
+	\Function{$\textup{\textsc{OneStepSARSA}}\left(\robbinsmonro\right)$}{
+		\Loop{}{
+			$\randomstate_{\timestep}\gets\randomstate_{0}\sim\transition_{0}\left(\cdot\right)$\;
+			\Loop{\textup{for each step of the episode}}{
+				$\randomaction_{\timestep}\sim\policy\left(\cdot\middle\vert\randomstate_{\timestep}\right)$ \Comment*[r]{$\varepsilon$-greedy}
+				$\randomstate_{\timestep+1}\sim\transition\left(\cdot\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)$, $\randomreward_{\timestep+1}\gets\immediatereward\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$\;
+				$\randomaction_{\timestep+1}\sim\policy\left(\cdot\middle\vert\randomstate_{\timestep+1}\right)$ \Comment*[r]{$\varepsilon$-greedy}
+				$\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\gets\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)+\robbinsmonro\left(\randomreward_{\timestep+1}+\discount\estimateactionvalue\left(\randomstate_{\timestep+1},\randomaction_{\timestep+1}\right)-\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\right)$\;
+				$\randomstate_{\timestep}\gets\randomstate_{\timestep+1}$\;
+			}
+		}
+		\KwRet{$\policy$}\;
+	}
+\end{algorithm}
+
+The update step for Q-learning is very similar, except that now the target policy is greedy with respect to~${\estimateactionvalue}$, giving us the following update rule:
+\begin{equation}
+	\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\gets\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)+\robbinsmonro\left(\randomreward_{\timestep+1}+\discount\max_{\varaction}\estimateactionvalue\left(\randomstate_{\timestep+1},\varaction\right)-\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\right).
+\end{equation}
+Due to the greediness of the target policy, the estimated action-value function~${\estimateactionvalue}$ directly approximates the optimal action-value function~${\actionvalue\optimal}$, regardless of the policy used for exploration. In particular, Q-learning can be shown to converge~{\cite{watkins1992qlearning, jaakkola1994, tsitsiklis1994}} to the optimal action-value function under the assumption that all state-action pairs continue to be visited, and a Robbins-Monro sequence of step sizes, as in~\eqref{eq:robbins_monro}. Q-learning with TD(0) prediction is detailed in Algorithm~\ref{alg:q_learning}.
+\begin{algorithm}
+	\caption{Q-learning, estimating~${\policy\approx\policy\optimal}$}
+	\label{alg:q_learning}
+
+	\Function{$\textup{\textsc{Q-Learning}}\left(\robbinsmonro\right)$}{
+		\Loop{}{
+			$\randomstate_{\timestep}\gets\randomstate_{0}\sim\transition_{0}\left(\cdot\right)$\;
+			\Loop{\textup{for each step of the episode}}{
+				$\randomaction_{\timestep}\sim\policy\left(\cdot\middle\vert\randomstate_{\timestep}\right)$\;
+				$\randomstate_{\timestep+1}\sim\transition\left(\cdot\middle\vert\randomstate_{\timestep},\randomaction_{\timestep}\right)$, $\randomreward_{\timestep+1}\gets\immediatereward\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)$\;
+				$\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\gets\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)+\robbinsmonro\left(\randomreward_{\timestep+1}+\discount\max_{\varaction}\estimateactionvalue\left(\randomstate_{\timestep+1},\varaction\right)-\estimateactionvalue\left(\randomstate_{\timestep},\randomaction_{\timestep}\right)\right)$\;
+				$\randomstate_{\timestep}\gets\randomstate_{\timestep+1}$\;
+			}
+		}
+		\KwRet{$\policy$}\;
+	}
+\end{algorithm}
+We also mention that, similarly to SARSA, two methods have been proposed to combine eligibility traces and Q-learning: Watkins's Q(${\lambda}$)~\cite{watkins1989learning} and Peng's Q(${\lambda}$)~\cite{peng1996}.
+
+\section{Value function approximation}
+So far we have always represented value functions by a lookup table. However, most interesting problems have large or continuous state spaces, which make the computation of the value function for all states not feasible. We can approximate the value function via function approximation~(FA), in order to generalize to states, or state-action pairs, which are yet to be visited, as follows:
+\begin{equation}
+\begin{split}
+	\approximatestatevalue\left(\state;\valueparameter\right)&\approx\statevalue\policyscript\left(\state\right),~\textnormal{or} \\
+	\approximateactionvalue\left(\state,\action;\valueparameter\right)&\approx\actionvalue\policyscript\left(\state,\action\right),
+\end{split}
+\end{equation}
+where~${\valueparameter}$ is a weight vector. There are many function approximation methods, but stochastic gradient descent (SGD) methods are particularly well suited for online reinforcement learning, so we will consider this specific case.
+
+\subsection{Stochastic gradient methods}
+Let~${\objective\left(\valueparameter\right)}$ be a differential function of parameter vector~${\valueparameter}$, where~${\valueparameter}$ is a column vector of real valued components of length~${\parametersize}$,~${\valueparameter\doteq\left(\valueparametercomponent_{1},\valueparametercomponent_{2},\dots,\valueparametercomponent_{\parametersize}\right)^{\top}}$. We define the gradient of~${\objective\left(\valueparameter\right)}$ as
+\begin{equation}
+	\nabla_{\valueparameter}\objective\left(\valueparameter\right)\doteq\left(\frac{\partial\objective\left(\valueparameter\right)}{\partial\valueparametercomponent_{1}},\dots,\frac{\partial\objective\left(\valueparameter\right)}{\partial\valueparametercomponent_{\parametersize}}\right)^{\top}.
+\end{equation}
+This vector is the direction of steepest ascent. By following the negative direction of the gradient vector, we will find a local minimum of the objective function~${\objective\left(\valueparameter\right)}$. Formally, the update rule will be
+\begin{equation}
+	\valueparameter\gets\valueparameter-\frac{1}{2}\gradientstep\nabla_{\valueparameter}\objective\left(\valueparameter\right),
+\end{equation}
+where~${\gradientstep}$ is a step size parameter. We will also assume the sequence of step sizes ${\left\{\gradientstep_{\indexletter}\right\}}$ to be a Robbins-Monro sequence, as in~\eqref{eq:robbins_monro}.
+
+We define our objective function as the mean squared error between the approximate value function~$\approximatestatevalue\left(\state;\valueparameter\right)$ and the true value function~${\statevalue\policyscript\left(\state\right)}$:
+\begin{equation}
+	\objective\left(\valueparameter\right)\doteq\mathbb{E}_{\policy}\left[\left(\statevalue\policyscript\left(\state\right)-\approximatestatevalue\left(\state;\valueparameter\right)\right)^{2}\right].
+\end{equation}
+Thus, the update rule becomes
+\begin{align}
+	\valueparameter
+		&\gets\valueparameter-\frac{1}{2}\gradientstep\nabla_{\valueparameter}\objective\left(\valueparameter\right) \notag \\
+		&=\valueparameter-\frac{1}{2}\gradientstep\nabla_{\valueparameter}\mathbb{E}_{\policy}\left[\left(\statevalue\policyscript\left(\state\right)-\approximatestatevalue\left(\state;\valueparameter\right)\right)^{2}\right] \notag \\
+		&=\valueparameter-\gradientstep\mathbb{E}_{\policy}\left[\left(\statevalue\policyscript\left(\state\right)-\approximatestatevalue\left(\state;\valueparameter\right)\right)\nabla_{\valueparameter}\approximatestatevalue\left(\state;\valueparameter\right)\right],
+\end{align}
+where the last equality follows by the chain rule. Furthermore, since we are only considering incremental methods (although, of course, there are also batch methods), we can simply apply the update after each sample, as follows:
+\begin{equation}
+	\valueparameter\gets\valueparameter-\gradientstep\left(\statevalue\policyscript\left(\randomstate_{\timestep}\right)-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\nabla_{\valueparameter}\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right).
+\end{equation}
+
+\subsection{Linear value function approximation}
+We will now consider the simple yet effective case in which the value function is represented by a linear combination of features, i.e.,
+\begin{equation}
+	\approximatestatevalue\left(\state;\valueparameter\right)\doteq\valueparameter^{\top}\featurevector\left(\state\right)\doteq\sum_{\indexletter=1}^{\parametersize}\valueparametercomponent_{\indexletter}\featurevectorcomponent_{\indexletter}\left(\state\right),
+\end{equation}
+where vector~${\featurevector\left(\state\right)}$ is a feature vector representing state~${\state}$. Each of its components~${\featurevectorcomponent_{\indexletter}\left(\state\right)}$ is the value of a function~${\featurevectorcomponent_{\indexletter}:\statespace\rightarrow\mathbb{R}}$, which can be nonlinear.
+
+In this case, the objective function is quadratic in the parameter vector~${\valueparameter}$, meaning that stochastic gradient descent will converge to the global minimum of the objective function~${\objective\left(\valueparameter\right)}$. Additionally, the update rule becomes remarkably simple:
+\begin{equation} \label{eq:vfa_sgd}
+	\valueparameter\gets\valueparameter-\gradientstep\left(\statevalue\policyscript\left(\randomstate_{\timestep}\right)-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\featurevector\left(\randomstate_{\timestep}\right),
+\end{equation}
+since~${\nabla_{\valueparameter}\approximatestatevalue\left(\state;\valueparameter\right)=\featurevector\left(\state\right)}$.
+
+\subsection{Radial basis functions}
+When we have no domain knowledge regarding the problem at hand, an option is that of using kernel feature maps, such as radial basis functions (RBFs). Each feature,~${\featurevectorcomponent_{\indexletter}}$, takes a value in the interval~${\left[0,1\right]}$. The response,~${\featurevectorcomponent_{\indexletter}\left(\state\right)}$, indicates how distant the state is to the feature's center,~${\rbfcenter_{\indexletter}}$, where the distance also depends on the width of the feature,~${\rbfwidth_{\indexletter}}$. A common choice for the type of radial basis function is the Gaussian, defined as
+\begin{equation}
+	\featurevectorcomponent_{\indexletter}\left(\state\right)\doteq\exp\left(-\left(\rbfwidth_{\indexletter}\left\lvert\left\lvert\state-\rbfcenter_{\indexletter}\right\rvert\right\rvert\right)^{2}\right).
+\end{equation}
+Figure~\ref{fig:rbf_by_width} shows the response in the one-dimensional setting for various choices of~${\rbfwidth}$.
+\begin{figure}
+\centering
+\input{tikz/rbf_by_width}
+\caption{Response for various choices of~${\rbfwidth}$.}
+\label{fig:rbf_by_width}
+\end{figure}
+As we will see later, such features require manual tuning in order to learn efficiently. Because of this, if possible, it is generally advisable to construct problem-specific features.
+
+\subsection{Prediction with function approximation}
+Update rule~\eqref{eq:vfa_sgd} cannot be performed. In fact, we do not have the true value function,~${\statevalue\policyscript\left(\state\right)}$, but we can substitute it with some approximation. For MC methods, the target is the return,~${\return_{\timestep}}$. For TD(0), the target is the TD target. For TD(${\lambda}$), the target is the~${\lambda}$-return,~${\return_{\timestep}^{\lambda}}$. We will see how prediction can be performed only in the last two cases, since MC methods do not extend as well to value function approximation.
+
+Assuming linear value function approximation, the update rule for TD(0) becomes
+\begin{align}
+	\valueparameter
+		&\gets\valueparameter-\gradientstep\left(\randomreward_{\timestep+1}+\discount\approximatestatevalue\left(\randomstate_{\timestep+1};\valueparameter\right)-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\nabla_{\valueparameter}\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right) \notag \\
+		&=\valueparameter-\gradientstep\tderror_{\timestep}\featurevector\left(\randomstate_{\timestep}\right).
+\end{align}
+Instead, in the case of backward TD(${\lambda}$), we have,
+\begin{align}
+	\valueparameter
+		&\gets\valueparameter-\gradientstep\left(\return_{\timestep}^{\lambda}-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\nabla_{\valueparameter}\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right) \notag \\
+		&=\valueparameter-\gradientstep\left(\return_{\timestep}^{\lambda}-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)\right)\featurevector\left(\randomstate_{\timestep}\right),
+\end{align}
+and in the case of forward TD(${\lambda}$)~\cite{sutton1988td},
+\begin{equation}
+\begin{split}
+	\tderror_{\timestep}&=\randomreward_{\timestep+1}+\discount\approximatestatevalue\left(\randomstate_{\timestep+1};\valueparameter\right)-\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right) \\
+	\trace_{\timestep}&=\discount\lambda\trace_{\timestep-1}+\nabla_{\valueparameter}\approximatestatevalue\left(\randomstate_{\timestep};\valueparameter\right)=\discount\lambda\trace_{\timestep-1}+\featurevector\left(\randomstate_{\timestep}\right) \\
+	\valueparameter&\gets\valueparameter-\gradientstep\tderror_{\timestep}\trace_{\timestep}.
+\end{split}
+\end{equation}
+
+Unfortunately, however, in the case of linear value function approximation, we do not have the same convergence guarantees that we have in the tabular case. In fact, TD prediction has an asymptotic error which depends on the discount factor~${\discount}$~\cite{tsitsiklis1996}.
+
+\subsection{Control with function approximation}
+Recall that to do control in the model-free case we need to use the action-value function instead of the state-value function. This implies that rather than representing a state by a feature vector, we will now represent a state-action pair, as follows:
+\begin{equation}
+	\featurevector\left(\state,\action\right)\doteq\left(\featurevectorcomponent_{1}\left(\state,\action\right),\dots,\featurevectorcomponent_{\parametersize}\left(\state,\action\right)\right)^{\top}.
+\end{equation}
+This also causes the vector~${\valueparameter}$ to be of length~${\parametersize\cdot\left\lvert\actionspace\right\rvert}$. We can see this as having a (state-value) feature vector for each of the possible actions. In the linear case, a simple idea is that of appending the feature vector~${\lvert\actionspace\rvert}$ times and then set to zero the feature values of all actions except the currently selected one~\cite{lagoudakis2003lspi}, as follows:
+\begin{equation}
+	\featurevector\left(\state,\action\right)\doteq
+	\begin{pmatrix}
+		\featurevector\left(\state\right)\cdot\mathbf{1}\left(\randomaction_{\timestep}=\action_{1}\right) \\
+		\vdots \\
+		\featurevector\left(\state\right)\cdot\mathbf{1}\left(\randomaction_{\timestep}=\action_{\left\lvert\actionspace\right\rvert}\right)
+	\end{pmatrix},
+\end{equation}
+and then updating the whole weight vector by stochastic gradient descent,
+\begin{equation}
+	\valueparameter\gets\valueparameter+\gradientstep\tderror_{\timestep}\featurevector\left(\randomstate_{\timestep},\randomaction_{\timestep}\right).
+\end{equation}
+Of course, copying the features many times is computationally very expensive. A better alternative is to leverage the sparsity of the vector and update only the relevant action. To do so, we reshape the value vector~$\valueparameter$ into a matrix of size~$\parametersize\times\left\lvert\actionspace\right\rvert$, and then update only the column corresponding to the selected action,
+\begin{equation}
+	\valueparameter_{\indexletter,\action}\gets\valueparameter_{\indexletter,\action}+\gradientstep\tderror_{\timestep}\featurevector\left(\randomstate_{\timestep}\right)~\textnormal{for}~\indexletter\in\left\{1,\dots,\parametersize\right\}~\textnormal{and}~\action=\randomaction_{\timestep}.
+\end{equation}
+
+Once again, in order to do control we apply the concept of generalized policy iteration, by interleaving (approximate) policy evaluation steps and policy improvement steps. However, in the linear case, SARSA ends up wandering around a bounded region near the optimal solution~\cite{gordon1996, gordon2001}, whereas Q-learning can even exhibit instability~\cite{baird1995}. Additionally, when doing control with nonlinear function approximators no theoretical guarantees have been proven.

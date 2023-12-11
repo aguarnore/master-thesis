@@ -1,0 +1,17 @@
+\begin{tikzpicture}
+\begin{axis}[
+    my cycle list, my axis, my scaling,
+    xlabel={Episodes},
+    ylabel={Reward},
+    xmin=0, xmax=800, ymin=-200, ymax=0,
+    width=0.35\linewidth,
+    scaled y ticks=false,
+    legend style={at={(1,0)},anchor=south east,cells={anchor=west}},
+]
+    \addplot+ table [x=episode, y=reward] {tikz/data/cumulative_reward/sarsa_reward.dat};
+    \addlegendentry{SARSA};
+
+    \addplot+ table [x=episode, y=reward] {tikz/data/cumulative_reward/qlearning_reward.dat};
+    \addlegendentry{Q-learning}
+\end{axis}
+\end{tikzpicture}

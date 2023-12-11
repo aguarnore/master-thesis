@@ -1,0 +1,53 @@
+\begin{tikzpicture}
+\begin{axis}[
+    my full width, my samples,
+    xmin=-1.2, xmax=0.6, ymin=0, ymax=1.2,
+    x axis line style={draw=none},
+    y axis line style={draw=none},
+    xtick={\empty},
+    ytick={\empty},
+    scale only axis,
+    axis equal image,
+]
+    % Hills
+    \addplot+[semithick, draw=black, mark=none] {sin(deg(3 * x)) * 0.45 + 0.55};
+
+    % Goal flag
+    \draw (pi / 6, 1) -- (pi / 6, 1.2);
+    \draw (pi / 6, 1.2) -- (pi / 6 + 0.05, 1.17);
+    \draw (pi / 6 + 0.05, 1.17) -- (pi / 6, 1.14);
+
+    % Car
+    \pgfmathsetmacro{\carrotataion}{49}
+    \pgfmathsetmacro{\carwidth}{0.17};
+    \pgfmathsetmacro{\carheight}{0.1};
+    \pgfmathsetmacro{\carposx}{-0.25};
+    \pgfmathsetmacro{\carposy}{sin(deg(3 * \carposx)) * 0.45 + 0.55 + \carheight / 2 + 0.1};
+    \draw[
+        % rotate around={cos(deg(3 * \carposx)):(\carposx, \carposy)}
+        rotate around={\carrotataion:(\carposx, \carposy)},
+        draw=none,
+        fill=black
+    ]
+        (\carposx - \carwidth / 2, \carposy - \carheight / 2) rectangle
+        (\carposx + \carwidth / 2, \carposy + \carheight / 2);
+
+    % Wheels
+    \pgfmathsetmacro{\wheelradius}{0.03};
+    \draw[
+        rotate around={\carrotataion:(\carposx, \carposy)},
+        draw=none,
+        fill=gray
+    ]
+        (\carposx - \carwidth / 4, \carposy - \carheight / 2 - \wheelradius / 2)
+        circle [radius=\wheelradius];
+    \pgfmathsetmacro{\wheelradius}{0.03};
+    \draw[
+        rotate around={\carrotataion:(\carposx, \carposy)},
+        draw=none,
+        fill=gray
+    ]
+        (\carposx + \carwidth / 4, \carposy - \carheight / 2 - \wheelradius / 2)
+        circle [radius=\wheelradius];
+\end{axis}
+\end{tikzpicture}

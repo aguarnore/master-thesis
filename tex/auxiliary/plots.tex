@@ -1,0 +1,49 @@
+% Take newest version
+\pgfplotsset{compat=newest}
+
+% Add color palettes
+\usetikzlibrary{pgfplots.colorbrewer}
+
+% Defines styles
+\pgfplotsset{
+    my scaling/.style={
+        title style={font=\small},
+        xlabel style={font=\small},
+        ylabel style={font=\small},
+        ticklabel style={font=\small},
+        legend style={font=\footnotesize},
+        ylabel shift=2.5pt,
+        scale only axis,
+        height=2.5cm,
+    },
+    my full width/.style={
+        width=5cm,
+    },
+    my axis/.style={
+        axis x line=bottom,
+        axis y line=left,
+        x axis line style=-,
+        y axis line style=-,
+    },
+    my cycle list/.style={
+        cycle multiindex* list={
+            linestyles* \nextlist
+        }
+    },
+    my anchored legend/.style={
+        legend style={
+            at={(1.1,0.5)},
+            anchor=west,
+            cells={anchor=west}
+        },
+    },
+    my samples/.style={
+        samples=200
+    },
+    my colormap/.style={
+        colormap/blackwhite,
+    },
+}
+
+% Plot space between two line plots
+\usepgfplotslibrary{fillbetween}

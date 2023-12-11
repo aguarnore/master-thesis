@@ -1,0 +1,72 @@
+% Optimal control
+\newcommand\statespace{\ensuremath{\mathcal{S}}}                                % MDP tuple
+\newcommand\actionspace{\ensuremath{\mathcal{A}}}
+\newcommand\transition{\ensuremath{p}}
+\newcommand\initialdistribution{\ensuremath{p_{0}}}
+\newcommand\immediatereward{\ensuremath{r}}
+\newcommand\discount{\ensuremath{\gamma}}
+\newcommand\randomstate{\ensuremath{s}}                                         % random variables
+\newcommand\randomaction{\ensuremath{a}}
+\newcommand\randomreward{\ensuremath{r}}
+\newcommand\state{\MakeLowercase{\randomstate}}                                 % value of random variables
+\newcommand\action{\MakeLowercase{\randomaction}}
+\newcommand\reward{\MakeLowercase{\randomreward}}
+\newcommand\policy{\ensuremath{\pi}}                                            % policy
+\newcommand\timestep{\ensuremath{t}}                                            % timesteps
+\newcommand\horizon{\ensuremath{T}}                                             % horizon
+
+\newcommand\return{\ensuremath{G}}                                              % return and value
+\newcommand\statevalue{\ensuremath{V}}
+\newcommand\actionvalue{\ensuremath{Q}}
+\newcommand\script[1]{\ensuremath{^{#1}}}                                       % whether to use sub- or superscripts for policy and optimality
+\newcommand\policyscript{\script{\policy}}
+\newcommand\optimal{\script{*}}
+\newcommand\bellmanoperator{\ensuremath{B}}                                     % Bellman operators
+\newcommand\valuevector{\ensuremath{U}}
+
+\newcommand\threshold{\ensuremath{\theta}}                                      % threshold for exact methods
+
+
+% Value-based reinforcement learning
+\newcommand\estimatestatevalue{\MakeUppercase{\statevalue}}                     % estimate value functions
+\newcommand\estimateactionvalue{\MakeUppercase{\actionvalue}}
+\newcommand\timesvisited{\ensuremath{N}}                                        % times visited a state/state-action pair
+
+\newcommand\tderror{\ensuremath{\delta}}                                        % TD learning
+\newcommand\robbinsmonro{\ensuremath{\alpha}}
+\newcommand\trace{\ensuremath{E}}                                               % eligibility trace
+\newcommand\approximatestatevalue{\ensuremath{\hat{\statevalue}}}               % approximate value functions
+\newcommand\approximateactionvalue{\ensuremath{\hat{\actionvalue}}}
+
+\newcommand\valueparametercomponent{\ensuremath{w}}                             % value parameter
+\newcommand\valueparameter{\ensuremath{\mathbf{\valueparametercomponent}}}
+\newcommand\parametersize{\ensuremath{d}}
+\newcommand\objective{\ensuremath{J}}                                           % objective function
+\newcommand\gradientstep{\ensuremath{\eta}}                                     % gradient descent step size
+\newcommand\featurevectorcomponent{\ensuremath{\phi}}                           % feature vector
+\newcommand\featurevector{\featurevectorcomponent}
+
+
+% Policy-based reinforcement learning
+\newcommand\policyparametercomponent{\ensuremath{\theta}}                       % policy parameter
+\newcommand\policyparameter{\policyparametercomponent}
+\newcommand\trajectory{\ensuremath{\tau}}                                       % trajectory
+\newcommand\baseline{\ensuremath{b}}                                            % baseline
+\newcommand\advantage{\ensuremath{A}}                                           % advantage function
+
+
+% Misc
+\newcommand\indexletter{\ensuremath{k}}                                         % letter used for indexes in sequences
+\newcommand\varaction{\ensuremath{b}}                                           % action when 'a' is already used
+
+
+% Radial basis functions
+\newcommand\rbfcenter{\ensuremath{c}}
+\newcommand\rbfwidth{\ensuremath{\sigma}}
+
+
+% Commands not created
+% epsilon for epsilon-greedy policies
+% n for n-step returns
+% lambda for TD(lambda)
+% Psi for generic policy gradient theorem
